@@ -13,6 +13,7 @@ import {
   resolvePersonaId,
   setLastChannelRoute,
 } from "@/lib/persistence";
+import { apiUrl } from "@/lib/api";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -42,7 +43,6 @@ const AuthenticatedCore = ({ user, onLogout }: AuthenticatedAppProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { channelId } = useParams<{ channelId: string }>();
-  const backendUrl = import.meta.env.VITE_BACKEND_URL as string;
 
   useEffect(() => {
     if (!client || channelId || location.pathname !== "/") return;
@@ -97,7 +97,7 @@ const AuthenticatedCore = ({ user, onLogout }: AuthenticatedAppProps) => {
         });
       });
 
-      const response = await fetch(`${backendUrl}/start-ai-agent`, {
+      const response = await fetch(apiUrl("/start-ai-agent"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -181,7 +181,6 @@ const AuthenticatedCore = ({ user, onLogout }: AuthenticatedAppProps) => {
         <ChatInterface
           onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
           onNewChatMessage={handleNewChatMessage}
-          backendUrl={backendUrl}
         />
       </div>
 

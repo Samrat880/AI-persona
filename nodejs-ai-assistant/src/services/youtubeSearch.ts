@@ -1,7 +1,64 @@
-import type { SocialLinks } from "../personas/config";
+import type { PersonaId, SocialLinks } from "../personas/config";
 import { getPersona, PERSONA_IDS } from "../personas/config";
 
 const YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3";
+
+/** Only these two guru channels may be recommended in chat. */
+export const ALLOWED_YOUTUBE_CHANNELS: Record<
+  PersonaId,
+  { handle: string; name: string; url: string }
+> = {
+  hitesh: {
+    handle: "chaiaurcode",
+    name: "Chai aur Code",
+    url: "https://www.youtube.com/@chaiaurcode",
+  },
+  piyush: {
+    handle: "piyushgargdev",
+    name: "Piyush Garg Dev",
+    url: "https://www.youtube.com/@piyushgargdev",
+  },
+};
+
+const ALLOWED_HANDLES = new Set(
+  Object.values(ALLOWED_YOUTUBE_CHANNELS).map((c) => c.handle.toLowerCase())
+);
+
+export function getYouTubeChannelRule(personaId: PersonaId): string {
+  const allowed = ALLOWED_YOUTUBE_CHANNELS[personaId];
+  const other = Object.entries(ALLOWED_YOUTUBE_CHANNELS)
+    .filter(([id]) => id !== personaId)
+    .map(([, c]) => `@${c.handle} (${c.name})`)
+    .join(", ");
+
+  return `- ONLY recommend YouTube videos/playlists from **@${allowed.handle}** (${allowed.name}): ${allowed.url}
+- NEVER link to any other YouTube channel — not Traversy Media, freeCodeCamp, old ChaiCode, Hitesh's other channels, or random tutorials
+- The only other allowed guru channel in this app is ${other} — recommend that ONLY if the user explicitly asks to compare gurus or switch mentors
+- Use ONLY YouTube URLs from the search results below — never invent or guess video IDs`;
+}
+
+export function isAllowedYouTubeUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.replace(/^www\./, "");
+    if (host !== "youtube.com" && host !== "youtu.be") return true;
+
+    const path = parsed.pathname;
+    const handleMatch = path.match(/\/@([^/]+)/);
+    if (handleMatch) {
+      return ALLOWED_HANDLES.has(handleMatch[1].toLowerCase());
+    }
+
+    // watch?v= and playlist?list= URLs come from our channel-scoped API search
+    return (
+      path.startsWith("/watch") ||
+      path.startsWith("/playlist") ||
+      path === "/"
+    );
+  } catch {
+    return false;
+  }
+}
 
 const channelIdCache = new Map<string, string>();
 
@@ -90,12 +147,18 @@ export function isLearningQuestion(message: string): boolean {
 }
 
 export function formatYouTubeContextForPrompt(
-  payload: YouTubeContextPayload
+  payload: YouTubeContextPayload,
+  personaId?: PersonaId
 ): string {
+  const channelMeta = personaId ? ALLOWED_YOUTUBE_CHANNELS[personaId] : null;
+  const channelLabel = channelMeta
+    ? `${channelMeta.name} (@${channelMeta.handle})`
+    : "this mentor's channel";
+
   const parts: string[] = [];
 
   parts.push(
-    `\n\n**Official YouTube channel (ALWAYS share this URL when user asks for channel/playlist/video links):**\n[Channel](${payload.channelUrl})`
+    `\n\n**Official YouTube channel — ${channelLabel} (ONLY channel you may recommend):**\n[${channelLabel}](${payload.channelUrl})`
   );
 
   if (payload.playlists.length > 0) {
@@ -135,8 +198,21 @@ export function formatVideosForPrompt(videos: YouTubeVideoResult[]): string {
 }
 
 export async function resolveChannelId(
-  social: SocialLinks
+  social: SocialLinks,
+  personaId?: PersonaId
 ): Promise<string | null> {
+  const expected =
+    personaId && ALLOWED_YOUTUBE_CHANNELS[personaId]
+      ? ALLOWED_YOUTUBE_CHANNELS[personaId].url
+      : null;
+
+  if (expected && social.youtube !== expected) {
+    console.warn(
+      `[YouTube] Channel URL mismatch for ${personaId}: expected ${expected}, got ${social.youtube}`
+    );
+    social.youtube = expected;
+  }
+
   if (social.youtubeChannelId) {
     return social.youtubeChannelId;
   }
@@ -190,7 +266,7 @@ export async function warmupYouTubeChannels(): Promise<void> {
 
   for (const personaId of PERSONA_IDS) {
     const persona = getPersona(personaId);
-    const channelId = await resolveChannelId(persona.social);
+    const channelId = await resolveChannelId(persona.social, personaId);
     if (channelId) {
       console.log(
         `[YouTube] Resolved ${persona.name} channel: ${channelId} (${persona.social.youtube})`
@@ -311,9 +387,13 @@ async function searchChannelVideos(
 
 export async function buildYouTubeContext(
   social: SocialLinks,
-  message: string
+  message: string,
+  personaId?: PersonaId
 ): Promise<YouTubeContextPayload> {
-  const channelUrl = social.youtube;
+  const channelUrl =
+    personaId && ALLOWED_YOUTUBE_CHANNELS[personaId]
+      ? ALLOWED_YOUTUBE_CHANNELS[personaId].url
+      : social.youtube;
   const apiKey = getApiKey();
 
   if (!apiKey) {
@@ -325,7 +405,7 @@ export async function buildYouTubeContext(
     };
   }
 
-  const channelId = await resolveChannelId(social);
+  const channelId = await resolveChannelId(social, personaId);
   if (!channelId) {
     return {
       channelUrl,
@@ -356,9 +436,10 @@ export async function buildYouTubeContext(
 export async function searchGuruYouTube(
   social: SocialLinks,
   query: string,
-  maxResults = 5
+  maxResults = 5,
+  personaId?: PersonaId
 ): Promise<YouTubeSearchResult> {
-  const payload = await buildYouTubeContext(social, query);
+  const payload = await buildYouTubeContext(social, query, personaId);
   return {
     videos: payload.videos.slice(0, maxResults),
     playlists: payload.playlists,

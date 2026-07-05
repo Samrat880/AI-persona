@@ -1,0 +1,17 @@
+{
+  "name": "guru-chat-app",
+  "private": true,
+  "scripts": {
+    "build": "cd nodejs-ai-assistant && npm run build && cd ../react-stream-ai-assistant && npm run build",
+    "dev:frontend": "cd react-stream-ai-assistant && npm run dev",
+    "dev:backend": "cd nodejs-ai-assistant && npm run dev"
+  },
+  "dependencies": {
+    "serverless-http": "^3.2.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.5.5",
+    "typescript": "^5.5.3"
+  }
+}

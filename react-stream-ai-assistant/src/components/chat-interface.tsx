@@ -24,7 +24,6 @@ import { Button } from "./ui/button";
 interface ChatInterfaceProps {
   onToggleSidebar: () => void;
   onNewChatMessage: (message: { text: string }) => Promise<void>;
-  backendUrl: string;
 }
 
 const EmptyStateWithInput: React.FC<{
@@ -160,12 +159,10 @@ const MessageListContent = ({ personaName }: { personaName: string }) => {
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   onToggleSidebar,
   onNewChatMessage,
-  backendUrl,
 }) => {
   const { channel } = useChatContext();
   const agentStatus = useAIAgentStatus({
     channelId: channel?.id ?? null,
-    backendUrl,
   });
 
   const activePersona = getPersona(agentStatus.activePersonaId);

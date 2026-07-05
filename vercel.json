@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "npm install && cd nodejs-ai-assistant && npm install && cd ../react-stream-ai-assistant && npm install",
+  "buildCommand": "cd nodejs-ai-assistant && npm run build && cd ../react-stream-ai-assistant && npm run build",
+  "outputDirectory": "react-stream-ai-assistant/dist",
+  "functions": {
+    "api/index.ts": {
+      "maxDuration": 300
+    }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ]
+}

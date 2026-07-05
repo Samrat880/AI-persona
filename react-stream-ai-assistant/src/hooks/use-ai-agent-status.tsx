@@ -1,4 +1,5 @@
 import type { PersonaId } from "@/config/personas";
+import { apiUrl } from "@/lib/api";
 import {
   persistPersonaSelection,
   resolvePersonaId,
@@ -9,13 +10,9 @@ export type AgentStatus = "disconnected" | "connecting" | "connected";
 
 interface UseAIAgentStatusProps {
   channelId: string | null;
-  backendUrl: string;
 }
 
-export const useAIAgentStatus = ({
-  channelId,
-  backendUrl,
-}: UseAIAgentStatusProps) => {
+export const useAIAgentStatus = ({ channelId }: UseAIAgentStatusProps) => {
   const [status, setStatus] = useState<AgentStatus>("disconnected");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +29,7 @@ export const useAIAgentStatus = ({
       if (!channelId) return;
 
       try {
-        await fetch(`${backendUrl}/set-persona`, {
+        await fetch(apiUrl("/set-persona"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -44,7 +41,7 @@ export const useAIAgentStatus = ({
         console.error("Error syncing persona with backend:", err);
       }
     },
-    [backendUrl, channelId]
+    [channelId]
   );
 
   const checkStatus = useCallback(async () => {
@@ -57,7 +54,7 @@ export const useAIAgentStatus = ({
 
     try {
       const response = await fetch(
-        `${backendUrl}/agent-status?channel_id=${channelId}`
+        apiUrl(`/agent-status?channel_id=${channelId}`)
       );
       if (response.ok) {
         const data = await response.json();
@@ -79,7 +76,7 @@ export const useAIAgentStatus = ({
     } finally {
       setLoading(false);
     }
-  }, [channelId, backendUrl, syncPersonaWithBackend]);
+  }, [channelId, syncPersonaWithBackend]);
 
   const refreshStatus = useCallback(async () => {
     await checkStatus();
@@ -95,7 +92,7 @@ export const useAIAgentStatus = ({
       setStatus("connecting");
 
       try {
-        const response = await fetch(`${backendUrl}/start-ai-agent`, {
+        const response = await fetch(apiUrl("/start-ai-agent"), {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -130,7 +127,7 @@ export const useAIAgentStatus = ({
         await checkStatus();
       }
     },
-    [channelId, backendUrl, loading, checkStatus]
+    [channelId, loading, checkStatus]
   );
 
   const disconnectAgent = useCallback(async () => {
@@ -140,7 +137,7 @@ export const useAIAgentStatus = ({
     setError(null);
 
     try {
-      const response = await fetch(`${backendUrl}/stop-ai-agent`, {
+      const response = await fetch(apiUrl("/stop-ai-agent"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -169,7 +166,7 @@ export const useAIAgentStatus = ({
     } finally {
       await checkStatus();
     }
-  }, [channelId, backendUrl, loading, checkStatus]);
+  }, [channelId, loading, checkStatus]);
 
   const setPersona = useCallback(
     async (personaId: PersonaId) => {

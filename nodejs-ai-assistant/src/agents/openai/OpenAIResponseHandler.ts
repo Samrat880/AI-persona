@@ -65,7 +65,8 @@ export class OpenAIResponseHandler {
                   );
                   const payload = await buildYouTubeContext(
                     persona.social,
-                    query
+                    query,
+                    this.personaId
                   );
                   toolOutputs.push({
                     tool_call_id: toolCall.id,
@@ -73,7 +74,10 @@ export class OpenAIResponseHandler {
                       channelUrl: payload.channelUrl,
                       playlists: payload.playlists,
                       videos: payload.videos,
-                      formatted: formatYouTubeContextForPrompt(payload),
+                      formatted: formatYouTubeContextForPrompt(
+                        payload,
+                        this.personaId
+                      ),
                       error: payload.error,
                     }),
                   });
@@ -262,6 +266,7 @@ export class OpenAIResponseHandler {
           max_results: 5,
           include_answer: true,
           include_raw_content: false,
+          exclude_domains: ["youtube.com", "youtu.be", "m.youtube.com"],
         }),
       });
 

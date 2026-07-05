@@ -40,7 +40,7 @@ export const PERSONAS: Record<PersonaId, PersonaUI> = {
   piyush: {
     id: "piyush",
     name: "Piyush",
-    tagline: "TeachMe — ship karo, seekho",
+    tagline: "Piyush Garg Dev — ship karo, seekho",
     avatarUrl: "/personas/Piyush.png",
     social: {
       youtube: "https://www.youtube.com/@piyushgargdev",

@@ -2,17 +2,18 @@ import OpenAI from "openai";
 import type { Channel, DefaultGenerics, Event, StreamChat } from "stream-chat";
 import {
   DEFAULT_PERSONA_ID,
-  formatSocialLinksForPrompt,
   getPersona,
   isValidPersonaId,
   type PersonaId,
 } from "../../personas/config";
+import { getPersonaInstructions } from "../../lib/personaInstructions";
+import { createOpenAIClient, createPersonaAssistant } from "../../lib/openaiSetup";
+import { serverClient } from "../../serverClient";
 import {
   buildYouTubeContext,
   formatYouTubeContextForPrompt,
   shouldFetchYouTubeContent,
 } from "../../services/youtubeSearch";
-import { serverClient } from "../../serverClient";
 import type { AIAgent, PersonaMessageCustom } from "../types";
 import { OpenAIResponseHandler } from "./OpenAIResponseHandler";
 
@@ -65,95 +66,12 @@ export class OpenAIAgent implements AIAgent {
   };
 
   init = async () => {
-    const apiKey = process.env.OPENAI_API_KEY as string | undefined;
-    if (!apiKey) {
-      throw new Error("OpenAI API key is required");
-    }
-
+    this.openai = createOpenAIClient();
     await this.updateBotProfile(this.activePersonaId);
-
-    this.openai = new OpenAI({ apiKey });
-    this.assistant = await this.openai.beta.assistants.create({
-      name: "Persona Chat Assistant",
-      instructions:
-        "You are a persona-based chat assistant. Follow the additional instructions provided with each message to stay in character.",
-      model: "gpt-4o",
-      tools: [
-        {
-          type: "function",
-          function: {
-            name: "search_guru_youtube",
-            description:
-              "Search this mentor's YouTube channel for videos or playlists on a topic. Use when user asks about a new topic mid-conversation.",
-            parameters: {
-              type: "object",
-              properties: {
-                query: {
-                  type: "string",
-                  description: "Search query for videos or playlists",
-                },
-              },
-              required: ["query"],
-            },
-          },
-        },
-        {
-          type: "function",
-          function: {
-            name: "web_search",
-            description:
-              "Search the web for current information. Use only when YouTube results are insufficient.",
-            parameters: {
-              type: "object",
-              properties: {
-                query: {
-                  type: "string",
-                  description: "The search query",
-                },
-              },
-              required: ["query"],
-            },
-          },
-        },
-      ],
-      temperature: 0.7,
-    });
+    this.assistant = await createPersonaAssistant(this.openai);
     this.openAiThread = await this.openai.beta.threads.create();
 
     this.chatClient.on("message.new", this.handleMessage);
-  };
-
-  private getPersonaInstructions = (
-    personaId: PersonaId,
-    youtubeContext = ""
-  ): string => {
-    const persona = getPersona(personaId);
-    const currentDate = new Date().toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-
-    return `${persona.systemPrompt}
-
-**Current Date:** ${currentDate}
-
-**Official Social Links:**
-${formatSocialLinksForPrompt(persona.social)}
-
-**MANDATORY link rules — NEVER break these:**
-- NEVER say "mere paas link nahi hai" or "I don't have a link". You ALWAYS have the official channel link below.
-- When user asks for playlist, channel, or video links, you MUST paste clickable markdown links in your reply.
-- Format: [Title](https://www.youtube.com/...)
-- Use ONLY links from the YouTube data section below or official social links above — never invent URLs.
-- When playlists or videos are listed below, include at least 1 channel link AND 1-3 playlist/video links.
-- Answer in Hinglish mentor voice, then give the links clearly.
-
-**Web Search:** Only for news/current events when YouTube data below is not enough.
-
-**Response Format:**
-- Stay fully in character as ${persona.name}
-- Be direct and conversational${youtubeContext}`;
   };
 
   private handleMessage = async (e: Event<DefaultGenerics>) => {
@@ -208,7 +126,11 @@ ${formatSocialLinksForPrompt(persona.social)}
       console.log(
         `[YouTube] Fetching content for ${persona.name}: "${message}"`
       );
-      const payload = await buildYouTubeContext(persona.social, message);
+      const payload = await buildYouTubeContext(
+        persona.social,
+        message,
+        personaId
+      );
 
       if (payload.error) {
         console.warn(`[YouTube] Issue: ${payload.error}`);
@@ -218,7 +140,7 @@ ${formatSocialLinksForPrompt(persona.social)}
         );
       }
 
-      youtubeContext = formatYouTubeContextForPrompt(payload);
+      youtubeContext = formatYouTubeContextForPrompt(payload, personaId);
     }
 
     await this.openai.beta.threads.messages.create(this.openAiThread.id, {
@@ -230,7 +152,7 @@ ${formatSocialLinksForPrompt(persona.social)}
       this.openAiThread.id,
       {
         assistant_id: this.assistant.id,
-        additional_instructions: this.getPersonaInstructions(
+        additional_instructions: getPersonaInstructions(
           personaId,
           youtubeContext
         ),

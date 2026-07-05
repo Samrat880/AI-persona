@@ -2,7 +2,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Bot, Check, Copy } from "lucide-react";
-import React, { useState } from "react";
+import React, { isValidElement, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import {
   useAIState,
@@ -10,6 +10,59 @@ import {
   useMessageContext,
   useMessageTextStreaming,
 } from "stream-chat-react";
+
+function getCodeText(children: React.ReactNode): string {
+  if (typeof children === "string") return children.replace(/\n$/, "");
+  if (Array.isArray(children)) {
+    return children.map((child) => getCodeText(child)).join("").replace(/\n$/, "");
+  }
+  if (isValidElement(children) && children.props.children) {
+    return getCodeText(children.props.children).replace(/\n$/, "");
+  }
+  return String(children ?? "").replace(/\n$/, "");
+}
+
+const MarkdownCodeBlock: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const [copied, setCopied] = useState(false);
+  const codeText = getCodeText(children);
+
+  const copyCode = async () => {
+    if (!codeText) return;
+    await navigator.clipboard.writeText(codeText);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="relative group/code my-2">
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={copyCode}
+        className="absolute top-2 right-2 z-10 h-7 px-2 text-xs bg-background/80 hover:bg-background border border-border/50 opacity-100 sm:opacity-0 sm:group-hover/code:opacity-100 transition-opacity"
+        aria-label="Copy code"
+      >
+        {copied ? (
+          <>
+            <Check className="h-3 w-3 mr-1 text-green-600" />
+            <span className="text-green-600">Copied</span>
+          </>
+        ) : (
+          <>
+            <Copy className="h-3 w-3 mr-1" />
+            <span>Copy</span>
+          </>
+        )}
+      </Button>
+      <pre className="p-3 pt-10 rounded-md overflow-x-auto text-xs font-mono bg-black/5 dark:bg-white/5 border border-border/30">
+        {children}
+      </pre>
+    </div>
+  );
+};
 
 const ChatMessage: React.FC = () => {
   const { message } = useMessageContext();
@@ -95,6 +148,9 @@ const ChatMessage: React.FC = () => {
                   p: ({ children }) => (
                     <p className="mb-3 last:mb-0 leading-relaxed">{children}</p>
                   ),
+                  pre: ({ children }) => (
+                    <MarkdownCodeBlock>{children}</MarkdownCodeBlock>
+                  ),
                   code: ({ children, ...props }) => {
                     const { node, ...rest } = props;
                     const isInline = !rest.className?.includes("language-");
@@ -107,9 +163,9 @@ const ChatMessage: React.FC = () => {
                         {children}
                       </code>
                     ) : (
-                      <pre className="p-3 rounded-md overflow-x-auto my-2 text-xs font-mono bg-black/5 dark:bg-white/5">
-                        <code {...rest}>{children}</code>
-                      </pre>
+                      <code className="font-mono" {...rest}>
+                        {children}
+                      </code>
                     );
                   },
                   ul: ({ children }) => (
