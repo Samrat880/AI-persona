@@ -25,12 +25,12 @@ import { warmupYouTubeChannels } from "./services/youtubeSearch";
 
 export const isServerless = Boolean(process.env.VERCEL);
 
-let youtubeWarmedUp = false;
-
-async function ensureYouTubeWarmup() {
-  if (!isServerless || youtubeWarmedUp) return;
-  youtubeWarmedUp = true;
-  await warmupYouTubeChannels();
+/** Fire-and-forget on serverless; blocking warmup runs on local server start only. */
+export function scheduleYouTubeWarmup() {
+  if (!isServerless) return;
+  void warmupYouTubeChannels().catch((error) => {
+    console.warn("[YouTube] Background warmup failed:", error);
+  });
 }
 
 const app = express();
@@ -117,15 +117,6 @@ app.post(
 );
 
 app.use(express.json());
-
-app.use(async (_req, _res, next) => {
-  try {
-    await ensureYouTubeWarmup();
-  } catch (error) {
-    console.warn("[YouTube] Warmup skipped:", error);
-  }
-  next();
-});
 
 const api = express.Router();
 

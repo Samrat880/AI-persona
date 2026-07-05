@@ -1,5 +1,5 @@
 import "dotenv/config";
-import app from "./app";
+import app, { scheduleYouTubeWarmup } from "./app";
 import { warmupYouTubeChannels } from "./services/youtubeSearch";
 
 const port = process.env.PORT || 3000;
