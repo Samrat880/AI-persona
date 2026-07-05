@@ -7,3 +7,5 @@
 {"sessionId":"6b08b0","hypothesisId":"B","location":"app.ts:api.get/public-config","message":"Public config served","data":{"exposesStreamKey":true,"exposesSecret":false,"keyLength":12},"timestamp":1783277298235}
 {"sessionId":"6b08b0","hypothesisId":"B","location":"app.ts:api.get/public-config","message":"Public config served","data":{"exposesStreamKey":true,"exposesSecret":false,"keyLength":12},"timestamp":1783277298244}
 {"sessionId":"6b08b0","hypothesisId":"B","location":"chat-provider.tsx:loadConfig","message":"Stream config loaded from backend","data":{"source":"backend","hasKey":true,"keyLength":12,"viteKeyPresent":false},"timestamp":1783277298340}
+{"sessionId":"6b08b0","hypothesisId":"D","location":"chat-provider.tsx:loadConfig","message":"Stream config load failed","data":{"error":"Config request failed (500)","url":"/api/public-config"},"timestamp":1783280660544}
+{"sessionId":"6b08b0","hypothesisId":"D","location":"chat-provider.tsx:loadConfig","message":"Stream config load failed","data":{"error":"Config request failed (500)","url":"/api/public-config"},"timestamp":1783280669855}

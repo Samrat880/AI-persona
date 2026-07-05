@@ -1,5 +1,5 @@
 import { StreamChat } from "stream-chat";
-import { apiKey, serverClient } from "../serverClient";
+import { getApiKey, getServerClient } from "../serverClient";
 import {
   DEFAULT_PERSONA_ID,
   type PersonaId,
@@ -14,8 +14,8 @@ export const createAgent = async (
   channel_id: string,
   personaId: PersonaId = DEFAULT_PERSONA_ID
 ): Promise<AIAgent> => {
-  const token = serverClient.createToken(user_id);
-  const chatClient = new StreamChat(apiKey, undefined, {
+  const token = getServerClient().createToken(user_id);
+  const chatClient = new StreamChat(getApiKey(), undefined, {
     allowServerSideConnect: true,
   });
 

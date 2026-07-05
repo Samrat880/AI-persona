@@ -4,7 +4,7 @@ import {
   isValidPersonaId,
   type PersonaId,
 } from "../personas/config";
-import { serverClient } from "../serverClient";
+import { getServerClient } from "../serverClient";
 
 export interface ChannelAgentState {
   ai_agent_enabled?: boolean;
@@ -30,7 +30,7 @@ export async function getChannelWithState(
   channelType: string,
   channelId: string
 ): Promise<{ channel: Channel; state: ChannelAgentState }> {
-  const channel = serverClient.channel(channelType, channelId);
+  const channel = getServerClient().channel(channelType, channelId);
   const response = await channel.query();
   const ch = response.channel as ChannelAgentState;
   const state: ChannelAgentState = {
@@ -48,7 +48,7 @@ export async function updateChannelAgentState(
   channelId: string,
   patch: Partial<ChannelAgentState>
 ) {
-  const channel = serverClient.channel(channelType, channelId);
+  const channel = getServerClient().channel(channelType, channelId);
   await channel.updatePartial({ set: patch });
 }
 

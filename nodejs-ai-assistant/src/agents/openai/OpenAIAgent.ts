@@ -8,7 +8,7 @@ import {
 } from "../../personas/config";
 import { getPersonaInstructions } from "../../lib/personaInstructions";
 import { createOpenAIClient, createPersonaAssistant } from "../../lib/openaiSetup";
-import { serverClient } from "../../serverClient";
+import { getServerClient } from "../../serverClient";
 import {
   buildYouTubeContext,
   formatYouTubeContextForPrompt,
@@ -58,7 +58,7 @@ export class OpenAIAgent implements AIAgent {
     const persona = getPersona(personaId);
     if (!this.user?.id) return;
 
-    await serverClient.upsertUser({
+    await getServerClient().upsertUser({
       id: this.user.id,
       name: persona.botDisplayName,
       image: persona.avatarUrl,

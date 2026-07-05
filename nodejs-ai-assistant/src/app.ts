@@ -20,7 +20,7 @@ import {
   startServerlessAgent,
   stopServerlessAgent,
 } from "./services/serverlessMessageProcessor";
-import { apiKey, serverClient } from "./serverClient";
+import { getApiKey, getServerClient } from "./serverClient";
 import { warmupYouTubeChannels } from "./services/youtubeSearch";
 
 export const isServerless = Boolean(process.env.VERCEL);
@@ -64,7 +64,7 @@ async function disposeAiAgent(aiAgent: AIAgent) {
   if (!aiAgent.user) {
     return;
   }
-  await serverClient.deleteUser(aiAgent.user.id, {
+  await getServerClient().deleteUser(aiAgent.user.id, {
     hard_delete: true,
   });
 }
@@ -82,7 +82,7 @@ app.post(
             ? req.body.toString("utf8")
             : JSON.stringify(req.body);
 
-      if (signature && !serverClient.verifyWebhook(rawBody, signature)) {
+      if (signature && !getServerClient().verifyWebhook(rawBody, signature)) {
         res.status(401).send("Invalid webhook signature");
         return;
       }
@@ -119,30 +119,17 @@ app.post(
 app.use(express.json());
 
 app.use(async (_req, _res, next) => {
-  await ensureYouTubeWarmup();
+  try {
+    await ensureYouTubeWarmup();
+  } catch (error) {
+    console.warn("[YouTube] Warmup skipped:", error);
+  }
   next();
 });
 
 const api = express.Router();
 
 api.get("/", (_req, res) => {
-  // #region agent log
-  fetch("http://127.0.0.1:7310/ingest/f7934a9a-252e-4d23-9bb1-8db129567959", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": "6b08b0",
-    },
-    body: JSON.stringify({
-      sessionId: "6b08b0",
-      hypothesisId: "A",
-      location: "app.ts:api.get/",
-      message: "Health check served",
-      data: { exposesApiKey: false, mode: isServerless ? "serverless" : "persistent" },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
   res.json({
     message: "Persona Chat Assistant Server is running",
     mode: isServerless ? "serverless" : "persistent",
@@ -151,28 +138,17 @@ api.get("/", (_req, res) => {
 });
 
 api.get("/public-config", (_req, res) => {
-  // #region agent log
-  fetch("http://127.0.0.1:7310/ingest/f7934a9a-252e-4d23-9bb1-8db129567959", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": "6b08b0",
-    },
-    body: JSON.stringify({
-      sessionId: "6b08b0",
-      hypothesisId: "B",
-      location: "app.ts:api.get/public-config",
-      message: "Public config served",
-      data: {
-        exposesStreamKey: true,
-        exposesSecret: false,
-        keyLength: apiKey?.length ?? 0,
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
-  res.json({ streamApiKey: apiKey });
+  try {
+    res.json({ streamApiKey: getApiKey() });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Server configuration error";
+    console.error("[API] /public-config failed:", message);
+    res.status(500).json({
+      error: "Server not configured",
+      hint: "Set STREAM_API_KEY and STREAM_API_SECRET in Vercel environment variables",
+    });
+  }
 });
 
 api.get("/personas", (_req, res) => {
@@ -213,13 +189,13 @@ api.post("/start-ai-agent", async (req, res) => {
       pendingAiAgents.add(user_id);
       const personaConfig = getPersona(personaId);
 
-      await serverClient.upsertUser({
+      await getServerClient().upsertUser({
         id: user_id,
         name: personaConfig.botDisplayName,
         image: personaConfig.avatarUrl,
       });
 
-      const channel = serverClient.channel(channel_type, channel_id);
+      const channel = getServerClient().channel(channel_type, channel_id);
       await channel.addMembers([user_id]);
 
       const agent = await createAgent(
@@ -304,7 +280,7 @@ api.post("/set-persona", async (req, res) => {
     const { state } = await getChannelWithState(channel_type, channel_id);
     if (state.ai_bot_user_id) {
       const persona = getPersona(persona_id);
-      await serverClient.upsertUser({
+      await getServerClient().upsertUser({
         id: state.ai_bot_user_id,
         name: persona.botDisplayName,
         image: persona.avatarUrl,
@@ -373,7 +349,7 @@ api.post("/token", async (req, res) => {
 
     const issuedAt = Math.floor(Date.now() / 1000);
     const expiration = issuedAt + 60 * 60;
-    const token = serverClient.createToken(userId, expiration, issuedAt);
+    const token = getServerClient().createToken(userId, expiration, issuedAt);
 
     res.json({ token });
   } catch (error) {

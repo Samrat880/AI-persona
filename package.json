@@ -1,10 +1,14 @@
 {
   "name": "guru-chat-app",
   "private": true,
+  "workspaces": [
+    "nodejs-ai-assistant",
+    "react-stream-ai-assistant"
+  ],
   "scripts": {
-    "build": "cd nodejs-ai-assistant && npm run build && cd ../react-stream-ai-assistant && npm run build",
-    "dev:frontend": "cd react-stream-ai-assistant && npm run dev",
-    "dev:backend": "cd nodejs-ai-assistant && npm run dev"
+    "build": "npm run build -w nodejs-ai-assistant && npm run build -w react-stream-ai-assistant",
+    "dev:frontend": "npm run dev -w react-stream-ai-assistant",
+    "dev:backend": "npm run dev -w nodejs-ai-assistant"
   },
   "dependencies": {
     "serverless-http": "^3.2.0"

@@ -10,7 +10,7 @@ import {
   isValidPersonaId,
   type PersonaId,
 } from "../personas/config";
-import { serverClient } from "../serverClient";
+import { getServerClient } from "../serverClient";
 import {
   getBotUserId,
   getChannelWithState,
@@ -58,7 +58,7 @@ export async function processServerlessMessage(
       const persona = getPersona(personaId);
       const botUserId = state.ai_bot_user_id;
       if (botUserId) {
-        await serverClient.upsertUser({
+        await getServerClient().upsertUser({
           id: botUserId,
           name: persona.botDisplayName,
           image: persona.avatarUrl,
@@ -121,7 +121,7 @@ export async function processServerlessMessage(
     openai,
     { id: state.openai_thread_id } as OpenAI.Beta.Threads.Thread,
     run,
-    serverClient,
+    getServerClient(),
     channel,
     channelMessage as MessageResponse,
     personaId,
@@ -140,13 +140,13 @@ export async function startServerlessAgent(
   const persona = getPersona(personaId);
   const openai = createOpenAIClient();
 
-  await serverClient.upsertUser({
+  await getServerClient().upsertUser({
     id: user_id,
     name: persona.botDisplayName,
     image: persona.avatarUrl,
   });
 
-  const channel = serverClient.channel(channelType, channelId);
+  const channel = getServerClient().channel(channelType, channelId);
   await channel.addMembers([user_id]);
 
   const assistant = await createPersonaAssistant(openai);
@@ -176,7 +176,7 @@ export async function stopServerlessAgent(
 
   if (state.ai_bot_user_id) {
     try {
-      await serverClient.deleteUser(state.ai_bot_user_id, { hard_delete: true });
+      await getServerClient().deleteUser(state.ai_bot_user_id, { hard_delete: true });
     } catch (e) {
       console.warn("Failed to delete bot user", e);
     }

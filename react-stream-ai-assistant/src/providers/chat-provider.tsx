@@ -74,7 +74,15 @@ export const ChatProvider = ({ user, children }: ChatProviderProps) => {
       try {
         const response = await fetch(apiUrl("/public-config"));
         if (!response.ok) {
-          throw new Error(`Config request failed (${response.status})`);
+          let detail = `Config request failed (${response.status})`;
+          try {
+            const body = (await response.json()) as { hint?: string; error?: string };
+            if (body.hint) detail = body.hint;
+            else if (body.error) detail = body.error;
+          } catch {
+            // ignore JSON parse errors
+          }
+          throw new Error(detail);
         }
         const data = (await response.json()) as { streamApiKey?: string };
         if (!data.streamApiKey) {
@@ -82,51 +90,12 @@ export const ChatProvider = ({ user, children }: ChatProviderProps) => {
         }
         if (!cancelled) {
           setStreamApiKey(data.streamApiKey);
-          // #region agent log
-          fetch("http://127.0.0.1:7310/ingest/f7934a9a-252e-4d23-9bb1-8db129567959", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-Debug-Session-Id": "6b08b0",
-            },
-            body: JSON.stringify({
-              sessionId: "6b08b0",
-              hypothesisId: "B",
-              location: "chat-provider.tsx:loadConfig",
-              message: "Stream config loaded from backend",
-              data: {
-                source: "backend",
-                hasKey: Boolean(data.streamApiKey),
-                keyLength: data.streamApiKey.length,
-                viteKeyPresent: Boolean(import.meta.env.VITE_STREAM_API_KEY),
-              },
-              timestamp: Date.now(),
-            }),
-          }).catch(() => {});
-          // #endregion
         }
       } catch (err) {
         if (!cancelled) {
           const message =
             err instanceof Error ? err.message : "Failed to load chat config";
           setConfigError(message);
-          // #region agent log
-          fetch("http://127.0.0.1:7310/ingest/f7934a9a-252e-4d23-9bb1-8db129567959", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-Debug-Session-Id": "6b08b0",
-            },
-            body: JSON.stringify({
-              sessionId: "6b08b0",
-              hypothesisId: "D",
-              location: "chat-provider.tsx:loadConfig",
-              message: "Stream config load failed",
-              data: { error: message, url: apiUrl("/public-config") },
-              timestamp: Date.now(),
-            }),
-          }).catch(() => {});
-          // #endregion
         }
       }
     };
