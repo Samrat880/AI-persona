@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "npm install && cd nodejs-ai-assistant && npm install && cd ../react-stream-ai-assistant && npm install",
+  "installCommand": "npm install && cd nodejs-ai-assistant && npm install --include=dev && cd ../react-stream-ai-assistant && npm install --include=dev",
   "buildCommand": "cd nodejs-ai-assistant && npm run build && cd ../react-stream-ai-assistant && npm run build",
   "outputDirectory": "react-stream-ai-assistant/dist",
   "functions": {
