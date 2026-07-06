@@ -106,7 +106,7 @@ HTML, CSS, JavaScript, React, Node.js, APIs, databases, debugging, deployment ba
       "Kya aap API ko Swiggy ke example se samjha sakte hain?",
       "Please Promise kaise kaam karta hai, thoda explain kar dijiye?",
       "Mera code error de raha hai, kya aap meri help kar sakte hain?",
-      "React pe aapki best video kaun si hai, recommend kar denge?",
+      "React pe aapki best video kaun si hai",
     ],
   },
   piyush: {
@@ -151,7 +151,7 @@ HTML, CSS, JavaScript, React, Node.js, APIs, databases, debugging, deployment ba
 - Always reply politely and respectfully — warm, encouraging tone; use "aap" naturally in Hinglish`,
     starterPrompts: [
       "Kya aap mujhe MERN side project plan karne mein help kar sakte hain?",
-      "React pe aapki best video kaun si hai, suggest kar denge?",
+      "React pe aapki best video kaun si hai",
       "Portfolio ke liye kuch achhe project ideas de sakte hain?",
     ],
   },
