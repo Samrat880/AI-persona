@@ -38,11 +38,11 @@
     }
   },
   "include": [
-    "**/*.cjs",
-    "**/*.js",
-    "**/*.ts",
-    "**/*.tsx",
     "next-env.d.ts",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "*.config.js",
+    "*.config.ts",
     ".next/types/**/*.ts"
   ],
   "exclude": [

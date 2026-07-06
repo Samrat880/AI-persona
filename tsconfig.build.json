@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "*.config.js",
+    "*.config.ts",
+    "next-env.d.ts",
+    "scripts/**/*.mjs",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "react-stream-ai-assistant/dist/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "generated",
+    "react-stream-ai-assistant",
+    ".next"
+  ]
+}
