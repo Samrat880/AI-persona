@@ -105,12 +105,18 @@ export const useAIAgentStatus = ({ channelId }: UseAIAgentStatusProps) => {
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
+          let reason = `Failed to start AI agent (${response.status})`;
+          try {
+            const errorData = await response.json();
+            reason = errorData.reason || errorData.error || reason;
+          } catch {
+            // 504/timeouts often return HTML, not JSON
+          }
           console.error(
             `[useAIAgentStatus] Failed to start agent for ${channelId}:`,
-            errorData.reason
+            reason
           );
-          setError(errorData.reason || "Failed to start AI agent");
+          setError(reason);
           setStatus("disconnected");
         } else {
           setActivePersonaId(persona);

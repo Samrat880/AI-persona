@@ -10,6 +10,26 @@
     "api/token.ts": {
       "maxDuration": 10
     },
+    "api/agent-status.ts": {
+      "maxDuration": 15,
+      "includeFiles": "nodejs-ai-assistant/dist/**"
+    },
+    "api/personas.ts": {
+      "maxDuration": 10,
+      "includeFiles": "nodejs-ai-assistant/dist/**"
+    },
+    "api/set-persona.ts": {
+      "maxDuration": 15,
+      "includeFiles": "nodejs-ai-assistant/dist/**"
+    },
+    "api/stop-ai-agent.ts": {
+      "maxDuration": 15,
+      "includeFiles": "nodejs-ai-assistant/dist/**"
+    },
+    "api/start-ai-agent.ts": {
+      "maxDuration": 60,
+      "includeFiles": "nodejs-ai-assistant/dist/**"
+    },
     "api/index.ts": {
       "maxDuration": 60,
       "includeFiles": "nodejs-ai-assistant/dist/**"
@@ -17,11 +37,6 @@
   },
   "rewrites": [
     { "source": "/api/webhook", "destination": "/api" },
-    { "source": "/api/start-ai-agent", "destination": "/api" },
-    { "source": "/api/stop-ai-agent", "destination": "/api" },
-    { "source": "/api/set-persona", "destination": "/api" },
-    { "source": "/api/agent-status", "destination": "/api" },
-    { "source": "/api/personas", "destination": "/api" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }

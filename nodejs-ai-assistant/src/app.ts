@@ -16,10 +16,10 @@ import {
 } from "./services/channelAgentState";
 import {
   getServerlessAgentStatus,
-  processServerlessMessage,
   startServerlessAgent,
   stopServerlessAgent,
-} from "./services/serverlessMessageProcessor";
+} from "./services/serverlessAgentLifecycle";
+import { processServerlessMessage } from "./services/serverlessMessageProcessor";
 import { getApiKey, getServerClient } from "./serverClient";
 import { warmupYouTubeChannels } from "./services/youtubeSearch";
 

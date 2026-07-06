@@ -149,7 +149,7 @@ HTML, CSS, JavaScript, React, Node.js, APIs, databases, debugging, deployment ba
 - If unsure on a technical topic, use search_guru_youtube before web_search`,
     starterPrompts: [
       "Help me plan a MERN side project",
-      "React pe tumhari best video kaun si hai?",
+      "AI pe aapki best video kaun si hai?",
       "Mujhe portfolio ke liye project ideas do",
     ],
   },

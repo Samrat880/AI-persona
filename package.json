@@ -11,6 +11,7 @@
     "dev:backend": "npm run dev -w nodejs-ai-assistant"
   },
   "dependencies": {
+    "openai": "^4.73.1",
     "serverless-http": "^3.2.0",
     "stream-chat": "^8.46.0"
   },
