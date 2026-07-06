@@ -28,6 +28,7 @@ If you still have a leftover `guru-chat/` folder from an older layout, stop the 
 | `TAVILY_API_KEY` | No | Web search for AI |
 | `YOUTUBE_API_KEY` | No | Guru YouTube video search |
 | `FRONTEND_URL` | No | Public URL for bot avatars |
+| `NEXT_PUBLIC_LANDING_VARIANT` | No | Set `default` for card login; otherwise editorial landing (default) |
 
 ## Deploy on Vercel
 
