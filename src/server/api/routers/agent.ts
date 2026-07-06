@@ -1,7 +1,5 @@
 import { z } from "zod";
-import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
-import { env } from "~/env";
 import { processServerlessMessage } from "~/server/services/serverlessMessageProcessor";
 import {
   getServerlessAgentStatus,
@@ -43,21 +41,22 @@ export const agentRouter = createTRPCRouter({
     return getServerlessAgentStatus(input.channelType, input.channelId);
   }),
 
-  /** Local dev only: Stream webhooks cannot reach localhost without a tunnel. */
+  /**
+   * Process a user message server-side. Used in all environments because Stream
+   * webhooks cannot reach localhost; on Vercel they may also be misconfigured.
+   */
   processMessage: publicProcedure
     .input(
       channelInput.extend({
         text: z.string().min(1),
         personaId: z.string().optional(),
+        messageId: z.string().optional(),
       })
     )
     .mutation(async ({ input }) => {
-      if (env.NODE_ENV !== "development") {
-        throw new TRPCError({ code: "FORBIDDEN" });
-      }
-
       const personaId = resolvePersonaIdFromInput(input.personaId);
       await processServerlessMessage(input.channelType, input.channelId, {
+        id: input.messageId,
         text: input.text,
         custom: { persona_id: personaId },
       });

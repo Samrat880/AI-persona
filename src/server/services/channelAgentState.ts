@@ -12,6 +12,8 @@ export interface ChannelAgentState {
   openai_thread_id?: string;
   openai_assistant_id?: string;
   ai_bot_user_id?: string;
+  /** Prevents duplicate AI replies when webhook and client both trigger processing. */
+  last_processed_message_id?: string;
   [key: string]: string | boolean | undefined;
 }
 
@@ -44,6 +46,7 @@ export async function getChannelWithState(
     openai_thread_id: ch.openai_thread_id,
     openai_assistant_id: ch.openai_assistant_id,
     ai_bot_user_id: ch.ai_bot_user_id,
+    last_processed_message_id: ch.last_processed_message_id as string | undefined,
   };
   return { channel, state };
 }

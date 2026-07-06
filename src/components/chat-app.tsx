@@ -29,7 +29,7 @@ import { ChatProvider } from "~/providers/chat-provider";
 import { ChatInterface } from "~/components/chat-interface";
 import { ChatSidebar } from "~/components/chat-sidebar";
 import { api } from "~/trpc/react";
-import { useDevAgentProcess } from "~/hooks/use-dev-agent-process";
+import { useAgentProcess } from "~/hooks/use-agent-process";
 
 interface ChatAppProps {
   user: User;
@@ -45,7 +45,7 @@ function ChatAppCore({ user, onLogout, channelId }: ChatAppProps) {
   const { client, setActiveChannel } = useChatContext();
   const router = useRouter();
   const startAgent = api.agent.start.useMutation();
-  const processDevMessage = useDevAgentProcess();
+  const processAgentMessage = useAgentProcess();
 
   useEffect(() => {
     if (!client || channelId) return;
@@ -109,15 +109,16 @@ function ChatAppCore({ user, onLogout, channelId }: ChatAppProps) {
         router.push(`/chat/${newChannel.id}`);
 
         await memberAddedPromise;
-        await newChannel.sendMessage({
+        const { message: sentMessage } = await newChannel.sendMessage({
           text: message.text,
           custom: { persona_id: personaId },
         });
 
-        processDevMessage({
+        processAgentMessage({
           channelId: newChannel.id!,
           text: message.text,
           personaId,
+          messageId: sentMessage.id,
         });
       } catch (error) {
         const errorMessage =
@@ -130,7 +131,7 @@ function ChatAppCore({ user, onLogout, channelId }: ChatAppProps) {
         });
       }
     },
-    [client, user.id, router, startAgent, toast, processDevMessage]
+    [client, user.id, router, startAgent, toast, processAgentMessage]
   );
 
   const handleToggleSidebar = useCallback(() => {

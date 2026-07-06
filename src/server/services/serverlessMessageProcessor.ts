@@ -15,6 +15,7 @@ import {
   getBotUserId,
   getChannelWithState,
   readPersonaFromState,
+  updateChannelAgentState,
 } from "./channelAgentState";
 import { startServerlessAgent } from "./serverlessAgentLifecycle";
 import {
@@ -43,6 +44,20 @@ export async function processServerlessMessage(
     channelType,
     channelId
   );
+
+  if (
+    incomingMessage.id &&
+    initialState.last_processed_message_id === incomingMessage.id
+  ) {
+    return;
+  }
+
+  if (incomingMessage.id) {
+    await updateChannelAgentState(channelType, channelId, {
+      last_processed_message_id: incomingMessage.id,
+    });
+  }
+
   let state = initialState;
 
   if (

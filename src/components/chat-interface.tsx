@@ -23,7 +23,7 @@ import {
   PersonaToggle,
 } from "~/components/persona-toggle";
 import { Button } from "~/components/ui/button";
-import { useDevAgentProcess } from "~/hooks/use-dev-agent-process";
+import { useAgentProcess } from "~/hooks/use-agent-process";
 
 interface ChatInterfaceProps {
   onToggleSidebar: () => void;
@@ -185,7 +185,7 @@ function ChannelMessageInput({
 }) {
   const { channel: activeChannel, messages } = useChannelStateContext();
   const { aiState } = useAIState(activeChannel);
-  const processDevMessage = useDevAgentProcess();
+  const processAgentMessage = useAgentProcess();
   const [inputText, setInputText] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -211,15 +211,16 @@ function ChannelMessageInput({
 
   const handleSendMessage = async (message: { text: string }) => {
     if (!activeChannel?.id) throw new Error("No active channel");
-    await activeChannel.sendMessage({
+    const { message: sentMessage } = await activeChannel.sendMessage({
       text: message.text,
       custom: { persona_id: activePersonaId },
     });
 
-    processDevMessage({
+    processAgentMessage({
       channelId: activeChannel.id,
       text: message.text,
       personaId: activePersonaId,
+      messageId: sentMessage.id,
     });
   };
 
