@@ -31,11 +31,16 @@ If you still have a leftover `guru-chat/` folder from an older layout, stop the 
 
 ## Deploy on Vercel
 
-1. Import this repo (root directory — **do not** set a subdirectory).
-2. Add env vars from `.env.example`.
-3. Deploy and note your production URL.
-4. Set `FRONTEND_URL` to that URL for bot avatar URLs in production.
-5. Stream dashboard → Webhook: `https://YOUR-URL/api/webhook` with event `message.new`.
+1. Import this repo with **Root Directory = `.`** (repo root — not `react-stream-ai-assistant` or `guru-chat`).
+2. In **Project Settings → Build & Development**:
+   - **Framework Preset:** Next.js
+   - **Build Command:** `npm run build` (or leave default)
+   - **Output Directory:** leave **empty** / default (do **not** use `react-stream-ai-assistant/dist`)
+   - If you see a **Production Override** warning, clear overrides so `vercel.json` applies
+3. Add env vars from `.env.example`.
+4. Deploy and note your production URL.
+5. Set `FRONTEND_URL` to that URL for bot avatar URLs in production.
+6. Stream dashboard → Webhook: `https://YOUR-URL/api/webhook` with event `message.new`.
 
 **Local dev:** AI replies work without a webhook tunnel via `agent.processMessage` (dev only). Production requires the Stream webhook.
 
