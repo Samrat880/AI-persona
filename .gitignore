@@ -3,6 +3,8 @@
 # dependencies
 /node_modules
 **/node_modules/
+/guru-chat/node_modules/
+/guru-chat
 /.pnp
 .pnp.js
 
@@ -53,3 +55,4 @@ debug*.log
 # legacy leftover folder (safe to delete locally)
 /guru-chat/
 /nodejs-ai-assistant/
+/react-stream-ai-assistant/

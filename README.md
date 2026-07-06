@@ -35,8 +35,8 @@ If you still have a leftover `guru-chat/` folder from an older layout, stop the 
 2. In **Project Settings → Build & Development**:
    - **Framework Preset:** Next.js
    - **Build Command:** `npm run build` (or leave default)
-   - **Output Directory:** leave **empty** / default (do **not** use `react-stream-ai-assistant/dist`)
-   - If you see a **Production Override** warning, clear overrides so `vercel.json` applies
+   - **Output Directory:** leave **empty** / default — click **Reset** if it shows `react-stream-ai-assistant/dist`
+   - If **Production Override** is enabled on Output Directory, **turn it off** or reset to default
 3. Add env vars from `.env.example`.
 4. Deploy and note your production URL.
 5. Set `FRONTEND_URL` to that URL for bot avatar URLs in production.
