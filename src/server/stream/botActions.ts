@@ -17,14 +17,17 @@ export function updateBotMessageText(
   messageId: string,
   botUserId: string,
   text: string,
-  final = false
+  final = false,
+  customPatch?: Record<string, unknown>
 ) {
+  const set: Record<string, unknown> = {
+    text,
+    generating: !final,
+    ...customPatch,
+  };
+
   return client
-    .partialUpdateMessage(
-      messageId,
-      { set: { text, generating: !final } },
-      botUserId
-    )
+    .partialUpdateMessage(messageId, { set }, botUserId)
     .catch((err: unknown) => {
       console.error(
         "[stream] partialUpdateMessage failed:",

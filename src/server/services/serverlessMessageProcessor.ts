@@ -1,5 +1,6 @@
 import type OpenAI from "openai";
 import type { MessageResponse } from "stream-chat";
+import type { YouTubeSource } from "~/lib/youtube-sources";
 import { OpenAIResponseHandler } from "~/server/agents/openai/OpenAIResponseHandler";
 import type { PersonaMessageCustom } from "~/server/agents/types";
 import { getPersonaInstructions } from "~/server/lib/personaInstructions";
@@ -20,6 +21,7 @@ import {
 import { startServerlessAgent } from "./serverlessAgentLifecycle";
 import {
   buildYouTubeContext,
+  buildYouTubeSourcesFromPayload,
   formatYouTubeContextForPrompt,
   shouldFetchYouTubeContent,
 } from "./youtubeSearch";
@@ -119,6 +121,7 @@ export async function processServerlessMessage(
   });
 
   let youtubeContext = "";
+  let youtubeSources: YouTubeSource[] = [];
   const persona = getPersona(personaId);
 
   if (shouldFetchYouTubeContent(message)) {
@@ -136,6 +139,7 @@ export async function processServerlessMessage(
       personaId
     );
     youtubeContext = formatYouTubeContextForPrompt(payload, personaId);
+    youtubeSources = buildYouTubeSourcesFromPayload(payload, personaId);
   }
 
   const openai = createOpenAIClient();
@@ -165,7 +169,8 @@ export async function processServerlessMessage(
     channelMessage as MessageResponse,
     personaId,
     botUserId,
-    () => undefined
+    () => undefined,
+    youtubeSources
   );
 
   await handler.run();

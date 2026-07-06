@@ -1,3 +1,4 @@
+import type { YouTubeSource } from "~/lib/youtube-sources";
 import type { PersonaId, SocialLinks } from "~/server/personas/config";
 import { getPersona, PERSONA_IDS } from "~/server/personas/config";
 
@@ -166,7 +167,7 @@ export function formatYouTubeContextForPrompt(
       .slice(0, 5)
       .map((p, i) => `${i + 1}. [${p.title}](${p.url})`);
     parts.push(
-      `\n**Playlists from this channel (MUST include 1-5 as markdown links when user asks for playlists):**\n${lines.join("\n")}`
+      `\n**Playlists from this channel (shown as rich cards below your reply — mention briefly in text, do not repeat full URLs):**\n${lines.join("\n")}`
     );
   }
 
@@ -175,7 +176,7 @@ export function formatYouTubeContextForPrompt(
       .slice(0, 3)
       .map((v, i) => `${i + 1}. [${v.title}](${v.url})`);
     parts.push(
-      `\n**Relevant videos from this channel (MUST include 1-3 as markdown links):**\n${lines.join("\n")}`
+      `\n**Relevant videos from this channel (shown as rich cards below your reply — mention 1-2 by title in text if helpful):**\n${lines.join("\n")}`
     );
   }
 
@@ -186,6 +187,51 @@ export function formatYouTubeContextForPrompt(
   }
 
   return parts.join("\n");
+}
+
+export function buildYouTubeSourcesFromPayload(
+  payload: YouTubeContextPayload,
+  personaId?: PersonaId,
+  max = 6
+): YouTubeSource[] {
+  const channelMeta = personaId ? ALLOWED_YOUTUBE_CHANNELS[personaId] : null;
+  const channelName = channelMeta?.name;
+  const sources: YouTubeSource[] = [];
+
+  if (payload.channelUrl) {
+    sources.push({
+      title: channelMeta
+        ? `${channelMeta.name} (@${channelMeta.handle})`
+        : "YouTube Channel",
+      url: payload.channelUrl,
+      type: "channel",
+      channelName,
+    });
+  }
+
+  for (const playlist of payload.playlists.slice(0, 3)) {
+    sources.push({
+      title: playlist.title,
+      url: playlist.url,
+      thumbnail: playlist.thumbnail || undefined,
+      type: "playlist",
+      channelName,
+    });
+    if (sources.length >= max) return sources;
+  }
+
+  for (const video of payload.videos.slice(0, 3)) {
+    sources.push({
+      title: video.title,
+      url: video.url,
+      thumbnail: video.thumbnail || undefined,
+      type: "video",
+      channelName,
+    });
+    if (sources.length >= max) return sources;
+  }
+
+  return sources;
 }
 
 /** @deprecated use formatYouTubeContextForPrompt */

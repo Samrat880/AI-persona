@@ -2,9 +2,17 @@
 
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import { Button } from "~/components/ui/button";
+import {
+  YouTubeLinkCard,
+  YouTubeSourcesBlock,
+} from "~/components/youtube-link-card";
 import { cn } from "~/lib/utils";
+import {
+  isYouTubeUrl,
+  parseYouTubeSourcesFromCustom,
+} from "~/lib/youtube-sources";
 import { Bot, Check, Copy } from "lucide-react";
-import React, { isValidElement, useState } from "react";
+import React, { isValidElement, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import {
   useAIState,
@@ -81,6 +89,101 @@ export default function ChatMessage() {
   const isUser = !message.user?.id?.startsWith("ai-bot");
   const [copied, setCopied] = useState(false);
 
+  const youtubeSources = useMemo(
+    () =>
+      parseYouTubeSourcesFromCustom(
+        message.custom as Record<string, unknown> | undefined
+      ),
+    [message.custom]
+  );
+
+  const markdownComponents = useMemo(
+    () => ({
+      p: ({ children }: { children?: React.ReactNode }) => (
+        <p className="mb-3 last:mb-0 leading-relaxed">{children}</p>
+      ),
+      pre: ({ children }: { children?: React.ReactNode }) => (
+        <MarkdownCodeBlock>{children}</MarkdownCodeBlock>
+      ),
+      code: ({
+        children,
+        className,
+        ...props
+      }: {
+        children?: React.ReactNode;
+        className?: string;
+      }) => {
+        const isInline = !className?.includes("language-");
+        return isInline ? (
+          <code
+            className="px-1.5 py-0.5 rounded text-xs font-mono bg-black/10 dark:bg-white/10"
+            {...props}
+          >
+            {children}
+          </code>
+        ) : (
+          <code className="font-mono" {...props}>
+            {children}
+          </code>
+        );
+      },
+      ul: ({ children }: { children?: React.ReactNode }) => (
+        <ul className="list-disc ml-4 mb-3 space-y-1">{children}</ul>
+      ),
+      ol: ({ children }: { children?: React.ReactNode }) => (
+        <ol className="list-decimal ml-4 mb-3 space-y-1">{children}</ol>
+      ),
+      li: ({ children }: { children?: React.ReactNode }) => (
+        <li className="leading-relaxed">{children}</li>
+      ),
+      strong: ({ children }: { children?: React.ReactNode }) => (
+        <strong className="font-semibold">{children}</strong>
+      ),
+      em: ({ children }: { children?: React.ReactNode }) => (
+        <em className="italic">{children}</em>
+      ),
+      a: ({
+        href,
+        children,
+      }: {
+        href?: string;
+        children?: React.ReactNode;
+      }) => {
+        if (href && isYouTubeUrl(href)) {
+          const title =
+            typeof children === "string"
+              ? children
+              : Array.isArray(children)
+                ? children.map(String).join("")
+                : "YouTube";
+          const matched = youtubeSources.find((s) => s.url === href);
+          return (
+            <YouTubeLinkCard
+              url={href}
+              title={title}
+              thumbnail={matched?.thumbnail}
+              type={matched?.type ?? "video"}
+              channelName={matched?.channelName}
+              compact
+            />
+          );
+        }
+
+        return (
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary underline underline-offset-2 hover:opacity-80"
+          >
+            {children}
+          </a>
+        );
+      },
+    }),
+    [youtubeSources]
+  );
+
   const copyToClipboard = async () => {
     if (streamedMessageText) {
       await navigator.clipboard.writeText(streamedMessageText);
@@ -142,48 +245,13 @@ export default function ChatMessage() {
             )}
           >
             <div className="break-words">
-              <ReactMarkdown
-                components={{
-                  p: ({ children }) => (
-                    <p className="mb-3 last:mb-0 leading-relaxed">{children}</p>
-                  ),
-                  pre: ({ children }) => (
-                    <MarkdownCodeBlock>{children}</MarkdownCodeBlock>
-                  ),
-                  code: ({ children, className, ...props }) => {
-                    const isInline = !className?.includes("language-");
-                    return isInline ? (
-                      <code
-                        className="px-1.5 py-0.5 rounded text-xs font-mono bg-black/10 dark:bg-white/10"
-                        {...props}
-                      >
-                        {children}
-                      </code>
-                    ) : (
-                      <code className="font-mono" {...props}>
-                        {children}
-                      </code>
-                    );
-                  },
-                  ul: ({ children }) => (
-                    <ul className="list-disc ml-4 mb-3 space-y-1">{children}</ul>
-                  ),
-                  ol: ({ children }) => (
-                    <ol className="list-decimal ml-4 mb-3 space-y-1">
-                      {children}
-                    </ol>
-                  ),
-                  li: ({ children }) => (
-                    <li className="leading-relaxed">{children}</li>
-                  ),
-                  strong: ({ children }) => (
-                    <strong className="font-semibold">{children}</strong>
-                  ),
-                  em: ({ children }) => <em className="italic">{children}</em>,
-                }}
-              >
+              <ReactMarkdown components={markdownComponents}>
                 {streamedMessageText || message.text || ""}
               </ReactMarkdown>
+
+              {!isUser && youtubeSources.length > 0 && (
+                <YouTubeSourcesBlock sources={youtubeSources} />
+              )}
             </div>
 
             {aiState && !streamedMessageText && !message.text && (

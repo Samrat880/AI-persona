@@ -1,9 +1,12 @@
 import OpenAI from "openai";
 import type { AssistantStream } from "openai/lib/AssistantStream";
 import type { Channel, Event, MessageResponse, StreamChat } from "stream-chat";
+import type { YouTubeSource } from "~/lib/youtube-sources";
+import { mergeYouTubeSources } from "~/lib/youtube-sources";
 import { getPersona, type PersonaId } from "~/server/personas/config";
 import {
   buildYouTubeContext,
+  buildYouTubeSourcesFromPayload,
   formatYouTubeContextForPrompt,
 } from "~/server/services/youtubeSearch";
 import {
@@ -17,6 +20,7 @@ export class OpenAIResponseHandler {
   private run_id = "";
   private is_done = false;
   private last_update_time = 0;
+  private youtubeSources: YouTubeSource[] = [];
   private static readonly STREAM_UPDATE_INTERVAL_MS = 120;
 
   constructor(
@@ -28,8 +32,10 @@ export class OpenAIResponseHandler {
     private readonly message: MessageResponse,
     private readonly personaId: PersonaId,
     private readonly botUserId: string,
-    private readonly onDispose: () => void
+    private readonly onDispose: () => void,
+    initialYoutubeSources: YouTubeSource[] = []
   ) {
+    this.youtubeSources = [...initialYoutubeSources];
     this.chatClient.on("ai_indicator.stop", this.handleStopGenerating);
   }
 
@@ -40,12 +46,18 @@ export class OpenAIResponseHandler {
   }
 
   private streamMessageText(messageId: string, text: string, final = false) {
+    const customPatch =
+      final && this.youtubeSources.length > 0
+        ? { youtube_sources: this.youtubeSources }
+        : undefined;
+
     return updateBotMessageText(
       this.chatClient,
       messageId,
       this.botUserId,
       text,
-      final
+      final,
+      customPatch
     );
   }
 
@@ -89,6 +101,10 @@ export class OpenAIResponseHandler {
                     persona.social,
                     query,
                     this.personaId
+                  );
+                  this.youtubeSources = mergeYouTubeSources(
+                    this.youtubeSources,
+                    buildYouTubeSourcesFromPayload(payload, this.personaId)
                   );
                   toolOutputs.push({
                     tool_call_id: toolCall.id,

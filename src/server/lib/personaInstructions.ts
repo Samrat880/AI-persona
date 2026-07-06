@@ -26,11 +26,11 @@ ${formatSocialLinksForPrompt(persona.social)}
 **MANDATORY YouTube channel rules — NEVER break these:**
 ${getYouTubeChannelRule(personaId)}
 - NEVER say "mere paas link nahi hai" or "I don't have a link". You ALWAYS have the official channel link below.
-- When user asks for playlist, channel, or video links, you MUST paste clickable markdown links in your reply.
-- Format: [Title](https://www.youtube.com/...)
+- When YouTube videos/playlists are found, they appear as **rich preview cards** in a Sources section below your message — you do NOT need to paste long URL lists.
+- Give your Hinglish answer first (short). Mention video/playlist titles naturally in the text if helpful.
+- If you include a link inline, use markdown: [Title](https://www.youtube.com/...) — it renders as a rich card.
 - Use ONLY links from the YouTube data section below or official social links above — never invent URLs.
-- When playlists or videos are listed below, include at least 1 channel link AND 1-3 playlist/video links.
-- Answer in Hinglish mentor voice, then give the links clearly.
+- Do NOT dump a numbered list of raw URLs at the end — the UI shows Sources cards automatically.
 
 **Web Search:** Only for news/current events when YouTube data below is not enough. Do NOT use web search to find YouTube videos — use only the guru channel above.
 
