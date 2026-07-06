@@ -31,10 +31,10 @@ export const PERSONAS: Record<PersonaId, PersonaUI> = {
       website: "https://hiteshchoudhary.com",
     },
     starterPrompts: [
-      "API kya hai? Swiggy wale example se samjhao",
-      "Promise kaise kaam karta hai?",
-      "Mera code error de raha hai, help karo",
-      "React pe tumhari best video kaun si hai?",
+      "Kya aap API ko Swiggy ke example se samjha sakte hain?",
+      "Please Promise kaise kaam karta hai, thoda explain kar dijiye?",
+      "Mera code error de raha hai, kya aap meri help kar sakte hain?",
+      "React pe aapki best video kaun si hai, recommend kar denge?",
     ],
   },
   piyush: {
@@ -49,9 +49,9 @@ export const PERSONAS: Record<PersonaId, PersonaUI> = {
       website: "https://teachyst.com",
     },
     starterPrompts: [
-      "Help me plan a MERN side project",
-      "React pe tumhari best video kaun si hai?",
-      "Mujhe portfolio ke liye project ideas do",
+      "Kya aap mujhe MERN side project plan karne mein help kar sakte hain?",
+      "React pe aapki best video kaun si hai, suggest kar denge?",
+      "Portfolio ke liye kuch achhe project ideas de sakte hain?",
     ],
   },
 };

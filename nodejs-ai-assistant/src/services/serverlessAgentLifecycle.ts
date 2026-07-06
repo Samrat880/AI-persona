@@ -1,4 +1,4 @@
-import { createOpenAIClient, createPersonaAssistant } from "../lib/openaiSetup";
+import { createOpenAIClient, getOrCreatePersonaAssistant } from "../lib/openaiSetup";
 import {
   DEFAULT_PERSONA_ID,
   getPersona,
@@ -21,25 +21,42 @@ export async function startServerlessAgent(
 ): Promise<ChannelAgentState> {
   const user_id = getBotUserId(channelId);
   const persona = getPersona(personaId);
-  const openai = createOpenAIClient();
-
-  await getServerClient().upsertUser({
-    id: user_id,
-    name: persona.botDisplayName,
-    image: persona.avatarUrl,
-  });
-
   const channel = getServerClient().channel(channelType, channelId);
-  await channel.addMembers([user_id]);
 
-  const assistant = await createPersonaAssistant(openai);
-  const thread = await openai.beta.threads.create();
+  const { state: existing } = await getChannelWithState(channelType, channelId);
+
+  if (
+    existing.ai_agent_enabled &&
+    existing.openai_thread_id &&
+    existing.openai_assistant_id
+  ) {
+    if (existing.ai_persona_id !== personaId) {
+      await channel.updatePartial({ set: { ai_persona_id: personaId } });
+    }
+    return { ...existing, ai_persona_id: personaId };
+  }
+
+  await Promise.all([
+    getServerClient().upsertUser({
+      id: user_id,
+      name: persona.botDisplayName,
+      image: persona.avatarUrl,
+    }),
+    channel.addMembers([user_id]),
+  ]);
+
+  const openai = createOpenAIClient();
+  const assistantId =
+    existing.openai_assistant_id ??
+    (await getOrCreatePersonaAssistant(openai)).id;
+  const threadId =
+    existing.openai_thread_id ?? (await openai.beta.threads.create()).id;
 
   const state: ChannelAgentState = {
     ai_agent_enabled: true,
     ai_persona_id: personaId,
-    openai_thread_id: thread.id,
-    openai_assistant_id: assistant.id,
+    openai_thread_id: threadId,
+    openai_assistant_id: assistantId,
     ai_bot_user_id: user_id,
   };
 

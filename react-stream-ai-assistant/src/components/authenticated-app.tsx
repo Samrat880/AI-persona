@@ -8,16 +8,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useToast } from "@/components/ui/use-toast";
+import type { PersonaId } from "@/config/personas";
 import {
   getLastChannelRoute,
-  resolvePersonaId,
+  persistPersonaSelection,
   setLastChannelRoute,
 } from "@/lib/persistence";
 import { apiUrl } from "@/lib/api";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { Channel, ChannelFilters, ChannelSort, User } from "stream-chat";
+import { Channel, User } from "stream-chat";
 import { useChatContext } from "stream-chat-react";
 import { v4 as uuidv4 } from "uuid";
 import { ChatProvider } from "../providers/chat-provider";
@@ -36,6 +38,7 @@ export const AuthenticatedApp = ({ user, onLogout }: AuthenticatedAppProps) => (
 );
 
 const AuthenticatedCore = ({ user, onLogout }: AuthenticatedAppProps) => {
+  const { toast } = useToast();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [channelToDelete, setChannelToDelete] = useState<Channel | null>(null);
@@ -76,10 +79,13 @@ const AuthenticatedCore = ({ user, onLogout }: AuthenticatedAppProps) => {
     syncChannelWithUrl();
   }, [channelId, client, setActiveChannel]);
 
-  const handleNewChatMessage = async (message: { text: string }) => {
+  const handleNewChatMessage = async (
+    message: { text: string },
+    personaId: PersonaId
+  ) => {
     if (!user.id) return;
 
-    const personaId = resolvePersonaId();
+    persistPersonaSelection(personaId);
 
     try {
       const newChannel = client.channel("messaging", uuidv4(), {
@@ -108,7 +114,14 @@ const AuthenticatedCore = ({ user, onLogout }: AuthenticatedAppProps) => {
       });
 
       if (!response.ok) {
-        throw new Error("AI agent failed to join the chat.");
+        let reason = "AI agent failed to join the chat.";
+        try {
+          const body = await response.json();
+          reason = body.reason || body.error || reason;
+        } catch {
+          reason = `AI agent failed (${response.status})`;
+        }
+        throw new Error(reason);
       }
 
       setActiveChannel(newChannel);
@@ -123,6 +136,11 @@ const AuthenticatedCore = ({ user, onLogout }: AuthenticatedAppProps) => {
       const errorMessage =
         error instanceof Error ? error.message : "Something went wrong";
       console.error("Error creating new chat:", errorMessage);
+      toast({
+        title: "Could not start chat",
+        description: errorMessage,
+        variant: "destructive",
+      });
     }
   };
 

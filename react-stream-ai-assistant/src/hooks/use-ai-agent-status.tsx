@@ -44,39 +44,44 @@ export const useAIAgentStatus = ({ channelId }: UseAIAgentStatusProps) => {
     [channelId]
   );
 
-  const checkStatus = useCallback(async () => {
-    if (!channelId) {
-      setStatus("disconnected");
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-
-    try {
-      const response = await fetch(
-        apiUrl(`/agent-status?channel_id=${channelId}`)
-      );
-      if (response.ok) {
-        const data = await response.json();
-        setStatus(data.status);
-
-        const storedPersona = resolvePersonaId(channelId);
-        if (data.status === "connected" && data.persona_id) {
-          if (data.persona_id !== storedPersona) {
-            await syncPersonaWithBackend(storedPersona);
-          }
-          setActivePersonaId(storedPersona);
-        }
-      } else {
+  const checkStatus = useCallback(
+    async (options?: { preserveConnected?: boolean }) => {
+      if (!channelId) {
         setStatus("disconnected");
+        setLoading(false);
+        return;
       }
-    } catch (err) {
-      console.error("Error checking agent status:", err);
-      setStatus("disconnected");
-    } finally {
-      setLoading(false);
-    }
-  }, [channelId, syncPersonaWithBackend]);
+      setLoading(true);
+
+      try {
+        const response = await fetch(
+          apiUrl(`/agent-status?channel_id=${channelId}`)
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setStatus(data.status);
+
+          const storedPersona = resolvePersonaId(channelId);
+          if (data.status === "connected" && data.persona_id) {
+            if (data.persona_id !== storedPersona) {
+              await syncPersonaWithBackend(storedPersona);
+            }
+            setActivePersonaId(storedPersona);
+          }
+        } else if (!options?.preserveConnected) {
+          setStatus("disconnected");
+        }
+      } catch (err) {
+        console.error("Error checking agent status:", err);
+        if (!options?.preserveConnected) {
+          setStatus("disconnected");
+        }
+      } finally {
+        setLoading(false);
+      }
+    },
+    [channelId, syncPersonaWithBackend]
+  );
 
   const refreshStatus = useCallback(async () => {
     await checkStatus();
@@ -121,6 +126,7 @@ export const useAIAgentStatus = ({ channelId }: UseAIAgentStatusProps) => {
         } else {
           setActivePersonaId(persona);
           persistPersonaSelection(persona, channelId);
+          setStatus("connected");
         }
       } catch (err) {
         console.error(
@@ -130,7 +136,8 @@ export const useAIAgentStatus = ({ channelId }: UseAIAgentStatusProps) => {
         setError("Network error starting AI agent");
         setStatus("disconnected");
       } finally {
-        await checkStatus();
+        setLoading(false);
+        void checkStatus({ preserveConnected: true });
       }
     },
     [channelId, loading, checkStatus]

@@ -1,5 +1,8 @@
 import OpenAI from "openai";
 
+let cachedAssistantId: string | null =
+  process.env.OPENAI_ASSISTANT_ID?.trim() || null;
+
 export function createOpenAIClient(): OpenAI {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
@@ -54,4 +57,17 @@ export async function createPersonaAssistant(openai: OpenAI) {
     ],
     temperature: 0.7,
   });
+}
+
+/** Reuse one assistant across channels — avoids slow create on every Connect. */
+export async function getOrCreatePersonaAssistant(
+  openai: OpenAI
+): Promise<{ id: string }> {
+  if (cachedAssistantId) {
+    return { id: cachedAssistantId };
+  }
+
+  const assistant = await createPersonaAssistant(openai);
+  cachedAssistantId = assistant.id;
+  return assistant;
 }
