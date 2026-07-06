@@ -19,6 +19,11 @@ export function getBotUserId(channelId: string) {
   return `ai-bot-${channelId.replace(/[!]/g, "")}`;
 }
 
+export function isStreamDeletedUserError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes("was deleted");
+}
+
 export function resolvePersonaId(persona_id?: string): PersonaId {
   if (persona_id && isValidPersonaId(persona_id)) {
     return persona_id;

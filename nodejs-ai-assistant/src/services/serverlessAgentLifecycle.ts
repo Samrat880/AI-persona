@@ -9,41 +9,100 @@ import { getServerClient } from "../serverClient";
 import {
   getBotUserId,
   getChannelWithState,
+  isStreamDeletedUserError,
   readPersonaFromState,
   updateChannelAgentState,
   type ChannelAgentState,
 } from "./channelAgentState";
+
+async function provisionBotUser(
+  channelType: string,
+  channelId: string,
+  personaId: PersonaId,
+  preferredBotUserId?: string
+): Promise<string> {
+  const persona = getPersona(personaId);
+  const channel = getServerClient().channel(channelType, channelId);
+  const defaultId = getBotUserId(channelId);
+  const candidateIds = [
+    preferredBotUserId,
+    defaultId,
+    `${defaultId}-r1`,
+    `${defaultId}-r2`,
+  ].filter((id, index, list): id is string => !!id && list.indexOf(id) === index);
+
+  for (const userId of candidateIds) {
+    try {
+      await getServerClient().upsertUser({
+        id: userId,
+        name: persona.botDisplayName,
+        image: persona.avatarUrl,
+      });
+      await channel.addMembers([userId]);
+      return userId;
+    } catch (error) {
+      if (!isStreamDeletedUserError(error)) {
+        throw error;
+      }
+      console.warn(`[Agent] Bot user ${userId} was deleted; trying next id`);
+    }
+  }
+
+  const fallbackId = `${defaultId}-${Date.now()}`;
+  await getServerClient().upsertUser({
+    id: fallbackId,
+    name: persona.botDisplayName,
+    image: persona.avatarUrl,
+  });
+  await channel.addMembers([fallbackId]);
+  return fallbackId;
+}
 
 export async function startServerlessAgent(
   channelType: string,
   channelId: string,
   personaId: PersonaId
 ): Promise<ChannelAgentState> {
-  const user_id = getBotUserId(channelId);
-  const persona = getPersona(personaId);
   const channel = getServerClient().channel(channelType, channelId);
-
   const { state: existing } = await getChannelWithState(channelType, channelId);
 
   if (
     existing.ai_agent_enabled &&
     existing.openai_thread_id &&
-    existing.openai_assistant_id
+    existing.openai_assistant_id &&
+    existing.ai_bot_user_id
   ) {
+    try {
+      await getServerClient().upsertUser({
+        id: existing.ai_bot_user_id,
+        name: getPersona(personaId).botDisplayName,
+        image: getPersona(personaId).avatarUrl,
+      });
+      await channel.addMembers([existing.ai_bot_user_id]);
+    } catch (error) {
+      if (!isStreamDeletedUserError(error)) {
+        throw error;
+      }
+      existing.ai_bot_user_id = await provisionBotUser(
+        channelType,
+        channelId,
+        personaId
+      );
+    }
+
     if (existing.ai_persona_id !== personaId) {
       await channel.updatePartial({ set: { ai_persona_id: personaId } });
     }
+
     return { ...existing, ai_persona_id: personaId };
   }
 
-  await Promise.all([
-    getServerClient().upsertUser({
-      id: user_id,
-      name: persona.botDisplayName,
-      image: persona.avatarUrl,
-    }),
-    channel.addMembers([user_id]),
-  ]);
+  const botUserId = await provisionBotUser(
+    channelType,
+    channelId,
+    personaId,
+    existing.ai_bot_user_id
+  );
 
   const openai = createOpenAIClient();
   const assistantId =
@@ -57,7 +116,7 @@ export async function startServerlessAgent(
     ai_persona_id: personaId,
     openai_thread_id: threadId,
     openai_assistant_id: assistantId,
-    ai_bot_user_id: user_id,
+    ai_bot_user_id: botUserId,
   };
 
   await channel.updatePartial({ set: state });
@@ -76,11 +135,9 @@ export async function stopServerlessAgent(
 
   if (state.ai_bot_user_id) {
     try {
-      await getServerClient().deleteUser(state.ai_bot_user_id, {
-        hard_delete: true,
-      });
+      await channel.removeMembers([state.ai_bot_user_id]);
     } catch (e) {
-      console.warn("Failed to delete bot user", e);
+      console.warn("Failed to remove bot from channel", e);
     }
   }
 }
@@ -110,11 +167,23 @@ export async function setServerlessPersona(
   const { state } = await getChannelWithState(channelType, channelId);
   if (state.ai_bot_user_id) {
     const persona = getPersona(personaId);
-    await getServerClient().upsertUser({
-      id: state.ai_bot_user_id,
-      name: persona.botDisplayName,
-      image: persona.avatarUrl,
-    });
+    try {
+      await getServerClient().upsertUser({
+        id: state.ai_bot_user_id,
+        name: persona.botDisplayName,
+        image: persona.avatarUrl,
+      });
+    } catch (error) {
+      if (!isStreamDeletedUserError(error)) {
+        throw error;
+      }
+      await provisionBotUser(
+        channelType,
+        channelId,
+        personaId,
+        state.ai_bot_user_id
+      );
+    }
   }
 }
 
