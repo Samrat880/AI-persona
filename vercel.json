@@ -31,12 +31,14 @@
       "includeFiles": "nodejs-ai-assistant/dist/**"
     },
     "api/index.ts": {
+      "maxDuration": 10
+    },
+    "api/webhook.ts": {
       "maxDuration": 60,
       "includeFiles": "nodejs-ai-assistant/dist/**"
     }
   },
   "rewrites": [
-    { "source": "/api/webhook", "destination": "/api" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }

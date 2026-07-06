@@ -34,7 +34,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }>("services/serverlessAgentLifecycle");
 
     const personaId = lifecycle.resolvePersonaIdFromInput(persona_id);
+    const startedAt = Date.now();
     await lifecycle.startServerlessAgent(channel_type, channel_id, personaId);
+    console.log(
+      `[start-ai-agent] Ready for ${channel_id} in ${Date.now() - startedAt}ms`
+    );
 
     res.status(200).json({
       message: "AI Agent started (serverless)",

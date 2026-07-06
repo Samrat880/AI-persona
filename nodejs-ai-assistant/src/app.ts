@@ -100,15 +100,17 @@ app.post(
         };
       };
 
+      res.status(200).send("OK");
+
       if (event.type === "message.new" && event.channel_id && event.message) {
-        await processServerlessMessage(
+        void processServerlessMessage(
           event.channel_type ?? "messaging",
           event.channel_id,
           event.message
-        );
+        ).catch((error) => {
+          console.error("[Webhook] Message processing failed:", error);
+        });
       }
-
-      res.status(200).send("OK");
     } catch (error) {
       console.error("[Webhook] Error:", error);
       res.status(500).send("Webhook handler error");

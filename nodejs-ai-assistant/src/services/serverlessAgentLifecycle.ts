@@ -97,19 +97,21 @@ export async function startServerlessAgent(
     return { ...existing, ai_persona_id: personaId };
   }
 
-  const botUserId = await provisionBotUser(
-    channelType,
-    channelId,
-    personaId,
-    existing.ai_bot_user_id
-  );
-
   const openai = createOpenAIClient();
-  const assistantId =
-    existing.openai_assistant_id ??
-    (await getOrCreatePersonaAssistant(openai)).id;
-  const threadId =
-    existing.openai_thread_id ?? (await openai.beta.threads.create()).id;
+  const [botUserId, assistantId, threadId] = await Promise.all([
+    provisionBotUser(
+      channelType,
+      channelId,
+      personaId,
+      existing.ai_bot_user_id
+    ),
+    existing.openai_assistant_id
+      ? Promise.resolve(existing.openai_assistant_id)
+      : getOrCreatePersonaAssistant(openai).then((assistant) => assistant.id),
+    existing.openai_thread_id
+      ? Promise.resolve(existing.openai_thread_id)
+      : openai.beta.threads.create().then((thread) => thread.id),
+  ]);
 
   const state: ChannelAgentState = {
     ai_agent_enabled: true,

@@ -1,17 +1,19 @@
-import serverless from "serverless-http";
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const appModule = require("../nodejs-ai-assistant/dist/app");
-const app = appModule.default;
-const scheduleYouTubeWarmup = appModule.scheduleYouTubeWarmup as
-  | (() => void)
-  | undefined;
+import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-if (scheduleYouTubeWarmup) {
-  scheduleYouTubeWarmup();
+/** Lightweight health check — do not load Express (avoids 504 on GET/POST /api). */
+export default function handler(_req: VercelRequest, res: VercelResponse) {
+  res.status(200).json({
+    message: "Persona Chat Assistant Server is running",
+    mode: "serverless",
+    routes: [
+      "/api/webhook",
+      "/api/start-ai-agent",
+      "/api/token",
+      "/api/public-config",
+    ],
+  });
 }
 
-export default serverless(app);
-
 export const config = {
-  maxDuration: 60,
+  maxDuration: 10,
 };
