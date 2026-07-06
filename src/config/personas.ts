@@ -58,9 +58,10 @@ export const PERSONAS: Record<PersonaId, PersonaUI> = {
       website: "https://teachyst.com",
     },
     starterPrompts: [
-      "Kya aap mujhe MERN side project plan karne mein help kar sakte hain?",
+      "hii piyush sir kaise ho",
+      "Docker aur Kubernetes mein kya difference hai?",
+      "MERN side project kaise plan karun?",
       "React pe aapki best video kaun si hai, suggest kar denge?",
-      "Portfolio ke liye kuch achhe project ideas de sakte hain?",
     ],
   },
 };
