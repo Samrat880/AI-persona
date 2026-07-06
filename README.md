@@ -1,41 +1,58 @@
-# Guru Chat App
+# Guru Chat
 
-Monorepo: `nodejs-ai-assistant` (Express backend) + `react-stream-ai-assistant` (Vite frontend).
+AI mentor chat app (Hitesh & Piyush) — **Next.js + tRPC + GetStream + OpenAI**.
 
-## Prerequisites
+All API keys stay on the server. This repository **is** the app (no subfolder).
 
-- Node.js 20+
-- npm (workspaces; `.npmrc` uses `legacy-peer-deps=true`)
-
-## Setup
-
-From the **repository root** (not a workspace subfolder):
+## Quick start
 
 ```bash
 npm install
-cp nodejs-ai-assistant/.env.example nodejs-ai-assistant/.env
-cp react-stream-ai-assistant/.env.example react-stream-ai-assistant/.env
+cp .env.example .env   # add Stream + OpenAI keys
+npm run dev
 ```
 
-Fill in `nodejs-ai-assistant/.env` (Stream, OpenAI, etc.). Set `FRONTEND_URL` to your frontend origin (`http://localhost:8080` locally, your Vercel URL in production).
+Open [http://localhost:3000](http://localhost:3000)
 
-## Local development
+> Uses `.npmrc` with `legacy-peer-deps=true` for Stream Chat peer deps.
 
-Run both from the repo root:
+If you still have a leftover `guru-chat/` folder from an older layout, stop the dev server and delete it — the app lives at the repo root.
 
-```bash
-npm run dev:backend   # http://localhost:3000
-npm run dev:frontend  # http://localhost:8080
+## Environment variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `STREAM_API_KEY` | Yes | GetStream public API key |
+| `STREAM_API_SECRET` | Yes | GetStream secret (server only) |
+| `OPENAI_API_KEY` | Yes | OpenAI API key |
+| `TAVILY_API_KEY` | No | Web search for AI |
+| `YOUTUBE_API_KEY` | No | Guru YouTube video search |
+| `FRONTEND_URL` | No | Public URL for bot avatars |
+
+## Deploy on Vercel
+
+1. Import this repo (root directory — **do not** set a subdirectory).
+2. Add env vars from `.env.example`.
+3. Deploy and note your production URL.
+4. Set `FRONTEND_URL` to that URL for bot avatar URLs in production.
+5. Stream dashboard → Webhook: `https://YOUR-URL/api/webhook` with event `message.new`.
+
+**Local dev:** AI replies work without a webhook tunnel via `agent.processMessage` (dev only). Production requires the Stream webhook.
+
+## Project layout
+
+```
+src/app/           pages + API (tRPC + webhook)
+src/components/    chat UI
+src/server/        AI logic + tRPC (secrets here)
+src/hooks/         client hooks
+public/personas/   Hitesh.png, Piyush.png
 ```
 
-`react-stream-ai-assistant/.env` should have `VITE_BACKEND_URL=http://localhost:3000`.
+## Scripts
 
-## Build
-
-```bash
-npm run build
-```
-
-## Deploy (Vercel)
-
-Deploy from the repo root. `vercel.json` builds both workspaces and serves the SPA from `react-stream-ai-assistant/dist`. Configure Stream webhook URL to `https://<your-domain>/api/webhook`.
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Development server |
+| `npm run build` | Production build |
+| `npm run start` | Run production build locally |

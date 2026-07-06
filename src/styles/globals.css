@@ -1,0 +1,159 @@
+@import "tailwindcss";
+@import "stream-chat-react/dist/css/v2/index.css";
+
+@theme {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-bebas: var(--font-bebas-neue), Impact, "Arial Narrow Bold", sans-serif;
+
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --radius-lg: var(--radius);
+}
+
+@layer base {
+  :root {
+    --editorial-red: #e31b23;
+    --editorial-black: #0a0a0a;
+    --editorial-white: #ffffff;
+
+    --background: 0 0% 100%;
+    --foreground: 0 0% 4%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 4%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 4%;
+    --primary: 358 78% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 10%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 40%;
+    --accent: 0 0% 96%;
+    --accent-foreground: 0 0% 10%;
+    --destructive: 358 78% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 88%;
+    --input: 0 0% 88%;
+    --ring: 358 78% 50%;
+    --radius: 0.25rem;
+  }
+
+  .dark {
+    --background: 0 0% 4%;
+    --foreground: 0 0% 96%;
+    --card: 0 0% 7%;
+    --card-foreground: 0 0% 96%;
+    --popover: 0 0% 7%;
+    --popover-foreground: 0 0% 96%;
+    --primary: 358 78% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 0 0% 92%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 0 0% 14%;
+    --accent-foreground: 0 0% 96%;
+    --destructive: 358 78% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 18%;
+    --input: 0 0% 16%;
+    --ring: 358 78% 50%;
+  }
+
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: var(--font-sans);
+    overscroll-behavior: none;
+  }
+
+  .str-chat__theme-light {
+    --str-chat__primary-color: hsl(var(--primary));
+    --str-chat__surface-color: hsl(var(--background));
+    --str-chat__secondary-surface-color: hsl(var(--card));
+    --str-chat__tertiary-surface-color: hsl(var(--muted));
+    --str-chat__border-color: hsl(var(--border));
+    --str-chat__text-color: hsl(var(--foreground));
+    --str-chat__own-message-bubble-background: hsl(var(--primary));
+    --str-chat__own-message-bubble-color: hsl(var(--primary-foreground));
+    --str-chat__message-bubble-background: hsl(var(--muted));
+    --str-chat__message-bubble-color: hsl(var(--foreground));
+  }
+
+  .str-chat__theme-dark {
+    --str-chat__primary-color: hsl(var(--primary));
+    --str-chat__surface-color: hsl(var(--background));
+    --str-chat__secondary-surface-color: hsl(var(--card));
+    --str-chat__tertiary-surface-color: hsl(var(--muted));
+    --str-chat__border-color: hsl(var(--border));
+    --str-chat__text-color: hsl(var(--foreground));
+    --str-chat__own-message-bubble-background: hsl(var(--primary));
+    --str-chat__own-message-bubble-color: hsl(var(--primary-foreground));
+    --str-chat__message-bubble-background: rgba(255, 255, 255, 0.08);
+    --str-chat__message-bubble-color: hsl(var(--foreground));
+  }
+
+  .font-bebas {
+    font-family: var(--font-bebas);
+  }
+
+  /* Keep delete controls visible in sidebar channel list */
+  .chat-sidebar-history .str-chat__channel-list,
+  .chat-sidebar-history .str-chat__channel-list-messenger,
+  .chat-sidebar-history .str-chat__channel-preview-messenger,
+  .chat-sidebar-history .str-chat__channel-preview {
+    overflow: visible !important;
+    max-width: 100%;
+  }
+
+  .chat-sidebar-history .str-chat__channel-preview-messenger,
+  .chat-sidebar-history .str-chat__channel-preview {
+    width: 100%;
+    min-width: 0;
+  }
+
+  @keyframes typing-bounce {
+    0%,
+    60%,
+    100% {
+      transform: translateY(0);
+    }
+    30% {
+      transform: translateY(-8px);
+    }
+  }
+
+  .typing-dot {
+    animation: typing-bounce 1.4s infinite;
+  }
+
+  .typing-dot:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+
+  .typing-dot:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+}
