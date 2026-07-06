@@ -11,3 +11,4 @@ dist/
 .env
 
 .cursor
+.cursor/debug*.log

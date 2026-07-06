@@ -1,7 +1,7 @@
 import type { PersonaId } from "@/config/personas";
 import { getPersona, PERSONA_LIST } from "@/config/personas";
 import { cn } from "@/lib/utils";
-import { Youtube } from "lucide-react";
+import { Video } from "lucide-react";
 import React from "react";
 
 interface PersonaToggleProps {
@@ -60,7 +60,7 @@ export const PersonaToggle: React.FC<PersonaToggleProps> = ({
         className="flex h-8 w-8 items-center justify-center rounded-md border bg-muted/40 text-muted-foreground hover:text-red-500 hover:bg-background transition-colors"
         title={`${activePersona.name}'s YouTube`}
       >
-        <Youtube className="h-4 w-4" />
+        <Video className="h-4 w-4" />
       </a>
     </div>
   );

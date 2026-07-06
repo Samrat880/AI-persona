@@ -7,7 +7,6 @@ import {
   Channel,
   MessageList,
   useAIState,
-  useChannelActionContext,
   useChannelStateContext,
   useChatContext,
   Window,
@@ -158,13 +157,14 @@ const MessageListContent = ({
   activePersonaId: PersonaId;
 }) => {
   const { messages, thread } = useChannelStateContext();
-  const { sendMessage } = useChannelActionContext();
+  const { channel } = useChannelStateContext();
   const isThread = !!thread;
 
   if (isThread) return null;
 
   const handleStarterSelect = async (prompt: string) => {
-    await sendMessage({
+    if (!channel) return;
+    await channel.sendMessage({
       text: prompt,
       custom: { persona_id: activePersonaId },
     });
@@ -213,7 +213,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   };
 
   const ChannelMessageInputComponent = () => {
-    const { sendMessage } = useChannelActionContext();
     const { channel, messages } = useChannelStateContext();
     const { aiState } = useAIState(channel);
     const [inputText, setInputText] = useState("");
@@ -240,7 +239,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     };
 
     const handleSendMessage = async (message: { text: string }) => {
-      await sendMessage({
+      if (!channel) throw new Error("No active channel");
+      await channel.sendMessage({
         text: message.text,
         custom: { persona_id: agentStatus.activePersonaId },
       });

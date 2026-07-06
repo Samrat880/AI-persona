@@ -205,6 +205,14 @@ export const useAIAgentStatus = ({ channelId }: UseAIAgentStatusProps) => {
     checkStatus();
   }, [checkStatus]);
 
+  // Auto-connect AI when opening a channel (local + deployed)
+  useEffect(() => {
+    if (!channelId) return;
+    const persona = resolvePersonaId(channelId);
+    void connectAgent(persona);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- connect once per channel
+  }, [channelId]);
+
   useEffect(() => {
     if (channelId) {
       const interval = setInterval(checkStatus, 120000);
