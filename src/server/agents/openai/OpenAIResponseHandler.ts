@@ -3,11 +3,10 @@ import type { AssistantStream } from "openai/lib/AssistantStream";
 import type { Channel, Event, MessageResponse, StreamChat } from "stream-chat";
 import type { YouTubeSource } from "~/lib/youtube-sources";
 import { mergeYouTubeSources } from "~/lib/youtube-sources";
-import { getPersona, type PersonaId } from "~/server/personas/config";
+import { getPersonaMeta, type PersonaId } from "~/server/personas/config";
 import {
   buildYouTubeContext,
   buildYouTubeSourcesFromPayload,
-  formatYouTubeContextForPrompt,
 } from "~/server/services/youtubeSearch";
 import {
   sendBotChannelEvent,
@@ -93,7 +92,7 @@ export class OpenAIResponseHandler {
                 const query = args.query as string;
 
                 if (toolCall.function.name === "search_guru_youtube") {
-                  const persona = getPersona(this.personaId);
+                  const persona = getPersonaMeta(this.personaId);
                   console.log(
                     `[YouTube] Tool search for ${persona.name}: "${query}"`
                   );
@@ -110,12 +109,12 @@ export class OpenAIResponseHandler {
                     tool_call_id: toolCall.id,
                     output: JSON.stringify({
                       channelUrl: payload.channelUrl,
-                      playlists: payload.playlists,
-                      videos: payload.videos,
-                      formatted: formatYouTubeContextForPrompt(
-                        payload,
-                        this.personaId
-                      ),
+                      videos: payload.videos
+                        .slice(0, 3)
+                        .map((v) => ({ title: v.title, url: v.url })),
+                      playlists: payload.playlists
+                        .slice(0, 3)
+                        .map((p) => ({ title: p.title, url: p.url })),
                       error: payload.error,
                     }),
                   });

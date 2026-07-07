@@ -2,16 +2,19 @@ import type OpenAI from "openai";
 import type { MessageResponse } from "stream-chat";
 import type { YouTubeSource } from "~/lib/youtube-sources";
 import { OpenAIResponseHandler } from "~/server/agents/openai/OpenAIResponseHandler";
-import type { PersonaMessageCustom } from "~/server/agents/types";
 import { getPersonaInstructions } from "~/server/lib/personaInstructions";
 import { createOpenAIClient } from "~/server/lib/openaiSetup";
 import {
-  getPersona,
+  getPersonaMeta,
   isValidPersonaId,
   type PersonaId,
 } from "~/server/personas/config";
 import { getServerClient } from "~/server/stream/serverClient";
 import { sendBotChannelEvent } from "~/server/stream/botActions";
+import {
+  processServerlessMessageInputSchema,
+  type ProcessServerlessMessageInput,
+} from "~/server/schemas/chat";
 import {
   getBotUserId,
   getChannelWithState,
@@ -26,21 +29,24 @@ import {
   shouldFetchYouTubeContent,
 } from "./youtubeSearch";
 
-interface WebhookMessage {
-  id?: string;
-  text?: string;
-  ai_generated?: boolean;
-  user?: { id?: string };
-  custom?: PersonaMessageCustom;
-}
-
 export async function processServerlessMessage(
   channelType: string,
   channelId: string,
-  incomingMessage: WebhookMessage
+  incomingMessage: ProcessServerlessMessageInput | Record<string, unknown>
 ) {
-  if (!incomingMessage.text || incomingMessage.ai_generated) return;
-  if (incomingMessage.user?.id?.startsWith("ai-bot")) return;
+  const parsed = processServerlessMessageInputSchema.safeParse(incomingMessage);
+  if (!parsed.success) {
+    console.warn(
+      "[process] Invalid message payload:",
+      parsed.error.flatten()
+    );
+    return;
+  }
+
+  const message = parsed.data;
+
+  if (message.ai_generated) return;
+  if (message.user?.id?.startsWith("ai-bot")) return;
 
   const { channel, state: initialState } = await getChannelWithState(
     channelType,
@@ -48,15 +54,15 @@ export async function processServerlessMessage(
   );
 
   if (
-    incomingMessage.id &&
-    initialState.last_processed_message_id === incomingMessage.id
+    message.id &&
+    initialState.last_processed_message_id === message.id
   ) {
     return;
   }
 
-  if (incomingMessage.id) {
+  if (message.id) {
     await updateChannelAgentState(channelType, channelId, {
-      last_processed_message_id: incomingMessage.id,
+      last_processed_message_id: message.id,
     });
   }
 
@@ -68,7 +74,7 @@ export async function processServerlessMessage(
     !state.openai_assistant_id ||
     !state.ai_bot_user_id
   ) {
-    const personaFromMessage = incomingMessage.custom?.persona_id;
+    const personaFromMessage = message.custom?.persona_id;
     const bootstrapPersona =
       personaFromMessage && isValidPersonaId(personaFromMessage)
         ? personaFromMessage
@@ -87,17 +93,15 @@ export async function processServerlessMessage(
   }
 
   const botUserId = state.ai_bot_user_id ?? getBotUserId(channelId);
-
-  const message = incomingMessage.text;
+  const messageText = message.text;
   let personaId = readPersonaFromState(state);
 
-  const custom = incomingMessage.custom;
-  const messagePersonaId = custom?.persona_id;
+  const messagePersonaId = message.custom?.persona_id;
   if (messagePersonaId && isValidPersonaId(messagePersonaId)) {
     personaId = messagePersonaId;
     if (personaId !== readPersonaFromState(state)) {
       await channel.updatePartial({ set: { ai_persona_id: personaId } });
-      const persona = getPersona(personaId);
+      const persona = getPersonaMeta(personaId);
       await getServerClient().upsertUser({
         id: botUserId,
         name: persona.botDisplayName,
@@ -122,9 +126,9 @@ export async function processServerlessMessage(
 
   let youtubeContext = "";
   let youtubeSources: YouTubeSource[] = [];
-  const persona = getPersona(personaId);
+  const persona = getPersonaMeta(personaId);
 
-  if (shouldFetchYouTubeContent(message)) {
+  if (shouldFetchYouTubeContent(messageText)) {
     await sendBotChannelEvent(channel, botUserId, {
       type: "ai_indicator.update",
       ai_state: "AI_STATE_EXTERNAL_SOURCES",
@@ -132,10 +136,10 @@ export async function processServerlessMessage(
       message_id: channelMessage.id,
     });
 
-    console.log(`[YouTube] Webhook search for ${persona.name}: "${message}"`);
+    console.log(`[YouTube] Search for ${persona.name}: "${messageText}"`);
     const payload = await buildYouTubeContext(
       persona.social,
-      message,
+      messageText,
       personaId
     );
     youtubeContext = formatYouTubeContextForPrompt(payload, personaId);
@@ -146,17 +150,19 @@ export async function processServerlessMessage(
 
   await openai.beta.threads.messages.create(state.openai_thread_id, {
     role: "user",
-    content: message,
+    content: messageText,
   });
+
+  const additionalInstructions = await getPersonaInstructions(
+    personaId,
+    youtubeContext
+  );
 
   const run = openai.beta.threads.runs.createAndStream(
     state.openai_thread_id,
     {
       assistant_id: state.openai_assistant_id,
-      additional_instructions: getPersonaInstructions(
-        personaId,
-        youtubeContext
-      ),
+      additional_instructions: additionalInstructions,
     }
   );
 

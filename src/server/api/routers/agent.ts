@@ -1,4 +1,3 @@
-import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { processServerlessMessage } from "~/server/services/serverlessMessageProcessor";
 import {
@@ -7,17 +6,17 @@ import {
   startServerlessAgent,
   stopServerlessAgent,
 } from "~/server/services/serverlessAgentLifecycle";
-
-const channelInput = z.object({
-  channelId: z.string().min(1),
-  channelType: z.string().default("messaging"),
-});
+import {
+  channelInputSchema,
+  optionalPersonaIdSchema,
+  processMessageInputSchema,
+} from "~/server/schemas/chat";
 
 export const agentRouter = createTRPCRouter({
   start: publicProcedure
     .input(
-      channelInput.extend({
-        personaId: z.string().optional(),
+      channelInputSchema.extend({
+        personaId: optionalPersonaIdSchema,
       })
     )
     .mutation(async ({ input }) => {
@@ -30,14 +29,12 @@ export const agentRouter = createTRPCRouter({
       return { personaId };
     }),
 
-  stop: publicProcedure
-    .input(channelInput)
-    .mutation(async ({ input }) => {
-      await stopServerlessAgent(input.channelType, input.channelId);
-      return { ok: true };
-    }),
+  stop: publicProcedure.input(channelInputSchema).mutation(async ({ input }) => {
+    await stopServerlessAgent(input.channelType, input.channelId);
+    return { ok: true };
+  }),
 
-  status: publicProcedure.input(channelInput).query(async ({ input }) => {
+  status: publicProcedure.input(channelInputSchema).query(async ({ input }) => {
     return getServerlessAgentStatus(input.channelType, input.channelId);
   }),
 
@@ -46,13 +43,7 @@ export const agentRouter = createTRPCRouter({
    * webhooks cannot reach localhost; on Vercel they may also be misconfigured.
    */
   processMessage: publicProcedure
-    .input(
-      channelInput.extend({
-        text: z.string().min(1),
-        personaId: z.string().optional(),
-        messageId: z.string().optional(),
-      })
-    )
+    .input(processMessageInputSchema)
     .mutation(async ({ input }) => {
       const personaId = resolvePersonaIdFromInput(input.personaId);
       await processServerlessMessage(input.channelType, input.channelId, {

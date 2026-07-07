@@ -1,21 +1,9 @@
 import { waitUntil } from "@vercel/functions";
 import { getServerClient } from "~/server/stream/serverClient";
 import { processServerlessMessage } from "~/server/services/serverlessMessageProcessor";
+import { webhookEventSchema } from "~/server/schemas/chat";
 
 export const maxDuration = 60;
-
-type WebhookEvent = {
-  type?: string;
-  channel_id?: string;
-  channel_type?: string;
-  message?: {
-    id?: string;
-    text?: string;
-    ai_generated?: boolean;
-    user?: { id?: string };
-    custom?: Record<string, unknown>;
-  };
-};
 
 export async function GET() {
   return new Response("OK", { status: 200 });
@@ -30,14 +18,22 @@ export async function POST(req: Request) {
       return new Response("Invalid webhook signature", { status: 401 });
     }
 
-    let event: WebhookEvent;
+    let json: unknown;
     try {
-      event = JSON.parse(rawBody) as WebhookEvent;
+      json = JSON.parse(rawBody) as unknown;
     } catch {
       return new Response("Invalid JSON", { status: 400 });
     }
 
-    if (event.type === "message.new" && event.channel_id && event.message) {
+    const parsed = webhookEventSchema.safeParse(json);
+    if (!parsed.success) {
+      console.warn("[webhook] Invalid payload:", parsed.error.flatten());
+      return new Response("Invalid payload", { status: 400 });
+    }
+
+    const event = parsed.data;
+
+    if (event.type === "message.new" && event.channel_id && event.message?.text) {
       const channelType = event.channel_type ?? "messaging";
       const channelId = event.channel_id;
       const message = event.message;

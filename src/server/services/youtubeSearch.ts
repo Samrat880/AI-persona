@@ -1,6 +1,6 @@
 import type { YouTubeSource } from "~/lib/youtube-sources";
 import type { PersonaId, SocialLinks } from "~/server/personas/config";
-import { getPersona, PERSONA_IDS } from "~/server/personas/config";
+import { getPersonaMeta, PERSONA_IDS } from "~/server/personas/config";
 
 const YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3";
 
@@ -311,7 +311,7 @@ export async function warmupYouTubeChannels(): Promise<void> {
   }
 
   for (const personaId of PERSONA_IDS) {
-    const persona = getPersona(personaId);
+    const persona = getPersonaMeta(personaId);
     const channelId = await resolveChannelId(persona.social, personaId);
     if (channelId) {
       console.log(

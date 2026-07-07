@@ -1,22 +1,24 @@
 import {
   formatSocialLinksForPrompt,
-  getPersona,
+  getPersonaMeta,
+  getPersonaPrompt,
   type PersonaId,
 } from "~/server/personas/config";
 import { getYouTubeChannelRule } from "~/server/services/youtubeSearch";
 
-export function getPersonaInstructions(
+export async function getPersonaInstructions(
   personaId: PersonaId,
   youtubeContext = ""
-): string {
-  const persona = getPersona(personaId);
+): Promise<string> {
+  const persona = getPersonaMeta(personaId);
+  const systemPrompt = await getPersonaPrompt(personaId);
   const currentDate = new Date().toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
     day: "numeric",
   });
 
-  return `${persona.systemPrompt}
+  return `${systemPrompt}
 
 **Current Date:** ${currentDate}
 

@@ -1,9 +1,8 @@
-import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import {
   getPublicPersonas,
-  getPersona,
-  isValidPersonaId,
+  getPersonaMeta,
+  parsePersonaId,
 } from "~/server/personas/config";
 import { getServerClient } from "~/server/stream/serverClient";
 import {
@@ -11,11 +10,7 @@ import {
   isStreamDeletedUserError,
   updateChannelAgentState,
 } from "~/server/services/channelAgentState";
-
-const channelInput = z.object({
-  channelId: z.string().min(1),
-  channelType: z.string().default("messaging"),
-});
+import { setPersonaInputSchema } from "~/server/schemas/chat";
 
 export const personaRouter = createTRPCRouter({
   list: publicProcedure.query(() => {
@@ -23,21 +18,13 @@ export const personaRouter = createTRPCRouter({
   }),
 
   setForChannel: publicProcedure
-    .input(
-      channelInput.extend({
-        personaId: z.string().min(1),
-      })
-    )
+    .input(setPersonaInputSchema)
     .mutation(async ({ input }) => {
-      if (!isValidPersonaId(input.personaId)) {
-        throw new Error("Invalid persona_id");
-      }
+      const personaId = parsePersonaId(input.personaId);
 
-      await updateChannelAgentState(
-        input.channelType,
-        input.channelId,
-        { ai_persona_id: input.personaId }
-      );
+      await updateChannelAgentState(input.channelType, input.channelId, {
+        ai_persona_id: personaId,
+      });
 
       const { state } = await getChannelWithState(
         input.channelType,
@@ -45,7 +32,7 @@ export const personaRouter = createTRPCRouter({
       );
 
       if (state.ai_bot_user_id) {
-        const persona = getPersona(input.personaId);
+        const persona = getPersonaMeta(personaId);
         try {
           await getServerClient().upsertUser({
             id: state.ai_bot_user_id,
@@ -59,6 +46,6 @@ export const personaRouter = createTRPCRouter({
         }
       }
 
-      return { personaId: input.personaId };
+      return { personaId };
     }),
 });

@@ -1,7 +1,7 @@
 import { createOpenAIClient, getOrCreatePersonaAssistant } from "~/server/lib/openaiSetup";
 import {
   DEFAULT_PERSONA_ID,
-  getPersona,
+  getPersonaMeta,
   isValidPersonaId,
   type PersonaId,
 } from "~/server/personas/config";
@@ -21,7 +21,7 @@ async function provisionBotUser(
   personaId: PersonaId,
   preferredBotUserId?: string
 ): Promise<string> {
-  const persona = getPersona(personaId);
+  const persona = getPersonaMeta(personaId);
   const channel = getServerClient().channel(channelType, channelId);
   const defaultId = getBotUserId(channelId);
   const candidateIds = [
@@ -75,8 +75,8 @@ export async function startServerlessAgent(
     try {
       await getServerClient().upsertUser({
         id: existing.ai_bot_user_id,
-        name: getPersona(personaId).botDisplayName,
-        image: getPersona(personaId).avatarUrl,
+        name: getPersonaMeta(personaId).botDisplayName,
+        image: getPersonaMeta(personaId).avatarUrl,
       });
       await channel.addMembers([existing.ai_bot_user_id]);
     } catch (error) {
@@ -168,7 +168,7 @@ export async function setServerlessPersona(
 
   const { state } = await getChannelWithState(channelType, channelId);
   if (state.ai_bot_user_id) {
-    const persona = getPersona(personaId);
+    const persona = getPersonaMeta(personaId);
     try {
       await getServerClient().upsertUser({
         id: state.ai_bot_user_id,
