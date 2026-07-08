@@ -2,7 +2,7 @@ import type OpenAI from "openai";
 import type { MessageResponse } from "stream-chat";
 import type { YouTubeSource } from "~/lib/youtube-sources";
 import { OpenAIResponseHandler } from "~/server/agents/openai/OpenAIResponseHandler";
-import { getPersonaInstructions } from "~/server/lib/personaInstructions";
+import { getAdditionalRunInstructions } from "~/server/lib/personaInstructions";
 import { createOpenAIClient } from "~/server/lib/openaiSetup";
 import {
   getPersonaMeta,
@@ -21,7 +21,9 @@ import {
   readPersonaFromState,
   updateChannelAgentState,
 } from "./channelAgentState";
+import { syncPersonaOpenAISession } from "./personaSession";
 import { startServerlessAgent } from "./serverlessAgentLifecycle";
+import { trimThreadHistory } from "./threadHistory";
 import {
   buildYouTubeContext,
   buildYouTubeSourcesFromPayload,
@@ -68,6 +70,14 @@ export async function processServerlessMessage(
 
   let state = initialState;
 
+  // Respect an explicit disconnect. A plain user message must NOT silently
+  // re-enable the agent — only the explicit Connect/start flow may do that.
+  // `false` means the user disconnected; `undefined` means never started yet
+  // (first message on a brand-new channel), which is still allowed to bootstrap.
+  if (state.ai_agent_enabled === false) {
+    return;
+  }
+
   if (
     !state.ai_agent_enabled ||
     !state.openai_thread_id ||
@@ -94,13 +104,12 @@ export async function processServerlessMessage(
 
   const botUserId = state.ai_bot_user_id ?? getBotUserId(channelId);
   const messageText = message.text;
-  let personaId = readPersonaFromState(state);
+  let personaId: PersonaId = readPersonaFromState(state);
 
   const messagePersonaId = message.custom?.persona_id;
   if (messagePersonaId && isValidPersonaId(messagePersonaId)) {
     personaId = messagePersonaId;
     if (personaId !== readPersonaFromState(state)) {
-      await channel.updatePartial({ set: { ai_persona_id: personaId } });
       const persona = getPersonaMeta(personaId);
       await getServerClient().upsertUser({
         id: botUserId,
@@ -109,6 +118,16 @@ export async function processServerlessMessage(
       });
     }
   }
+
+  const openai = createOpenAIClient();
+
+  state = await syncPersonaOpenAISession(
+    openai,
+    channelType,
+    channelId,
+    state,
+    personaId
+  );
 
   const { message: channelMessage } = await channel.sendMessage({
     text: "",
@@ -146,29 +165,26 @@ export async function processServerlessMessage(
     youtubeSources = buildYouTubeSourcesFromPayload(payload, personaId);
   }
 
-  const openai = createOpenAIClient();
+  await trimThreadHistory(openai, state.openai_thread_id!);
 
-  await openai.beta.threads.messages.create(state.openai_thread_id, {
+  await openai.beta.threads.messages.create(state.openai_thread_id!, {
     role: "user",
     content: messageText,
   });
 
-  const additionalInstructions = await getPersonaInstructions(
-    personaId,
-    youtubeContext
-  );
+  const additionalInstructions = getAdditionalRunInstructions(youtubeContext);
 
   const run = openai.beta.threads.runs.createAndStream(
-    state.openai_thread_id,
+    state.openai_thread_id!,
     {
-      assistant_id: state.openai_assistant_id,
+      assistant_id: state.openai_assistant_id!,
       additional_instructions: additionalInstructions,
     }
   );
 
   const handler = new OpenAIResponseHandler(
     openai,
-    { id: state.openai_thread_id } as OpenAI.Beta.Threads.Thread,
+    { id: state.openai_thread_id! } as OpenAI.Beta.Threads.Thread,
     run,
     getServerClient(),
     channel,

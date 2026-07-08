@@ -21,7 +21,7 @@ import {
 } from "~/lib/persistence";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Channel, User } from "stream-chat";
 import { useChatContext } from "stream-chat-react";
 import { v4 as uuidv4 } from "uuid";
@@ -46,9 +46,16 @@ function ChatAppCore({ user, onLogout, channelId }: ChatAppProps) {
   const router = useRouter();
   const startAgent = api.agent.start.useMutation();
   const processAgentMessage = useAgentProcess();
+  const hasRestoredRouteRef = useRef(false);
 
   useEffect(() => {
-    if (!client || channelId) return;
+    // Only restore the last opened chat once, on initial mount. Otherwise this
+    // would bounce the user back to the previous chat whenever they click
+    // "New Chat" (which navigates to /chat and clears channelId).
+    if (hasRestoredRouteRef.current) return;
+    if (!client) return;
+    hasRestoredRouteRef.current = true;
+    if (channelId) return;
     const savedRoute = getLastChannelRoute();
     if (savedRoute && savedRoute !== "/chat") {
       router.replace(savedRoute);

@@ -70,10 +70,10 @@ const PURE_SOCIAL_PATTERN =
   /\b(instagram|insta|twitter|x\.com|linkedin|website)\b/i;
 
 const YOUTUBE_CONTENT_REQUEST =
-  /\b(playlist|playlists|video|videos|link|links|channel|youtube|chaicode|chaiaurcode|teachme|tutorial|course|series|subscribe|dekho|batao|do|share|send)\b/i;
+  /\b(playlist|playlists|video|videos|link|links|channel|youtube|chaicode|chaiaurcode|subscribe|share|send|best video|recommend|suggest|kaun si video|video batao|link do|playlist batao)\b/i;
 
-const LEARNING_PATTERN =
-  /\b(explain|how to|how do|what is|what are|samjhao|batao|teach|tutorial|video|roadmap|project|build|code|react|node|javascript|mern|api|debug|error|learn|seekho|help me|best way|guide|portfolio|deploy|database|mongodb|express|typescript|css|html|full.?stack|backend|frontend)\b/i;
+const VIDEO_RECOMMENDATION =
+  /\b(best video|recommend kar|suggest kar|kaun si video|which video|video link|playlist link)\b/i;
 
 export interface YouTubeVideoResult {
   title: string;
@@ -131,15 +131,16 @@ export function shouldFetchYouTubeContent(message: string): boolean {
   if (GREETING_PATTERN.test(trimmed)) return false;
 
   if (YOUTUBE_CONTENT_REQUEST.test(trimmed)) return true;
-  if (LEARNING_PATTERN.test(trimmed)) return true;
+  if (VIDEO_RECOMMENDATION.test(trimmed)) return true;
 
-  const isPureSocial =
+  if (
     PURE_SOCIAL_PATTERN.test(trimmed) &&
-    !YOUTUBE_CONTENT_REQUEST.test(trimmed) &&
-    !LEARNING_PATTERN.test(trimmed);
-  if (isPureSocial) return false;
+    !YOUTUBE_CONTENT_REQUEST.test(trimmed)
+  ) {
+    return false;
+  }
 
-  return trimmed.length >= 8;
+  return false;
 }
 
 /** @deprecated use shouldFetchYouTubeContent */
@@ -156,37 +157,31 @@ export function formatYouTubeContextForPrompt(
     ? `${channelMeta.name} (@${channelMeta.handle})`
     : "this mentor's channel";
 
-  const parts: string[] = [];
-
-  parts.push(
-    `\n\n**Official YouTube channel — ${channelLabel} (ONLY channel you may recommend):**\n[${channelLabel}](${payload.channelUrl})`
-  );
-
-  if (payload.playlists.length > 0) {
-    const lines = payload.playlists
-      .slice(0, 5)
-      .map((p, i) => `${i + 1}. [${p.title}](${p.url})`);
-    parts.push(
-      `\n**Playlists from this channel (shown as rich cards below your reply — mention briefly in text, do not repeat full URLs):**\n${lines.join("\n")}`
-    );
-  }
+  const lines: string[] = [
+    `**YouTube (${channelLabel}):** ${payload.channelUrl} — rich cards appear below your reply.`,
+  ];
 
   if (payload.videos.length > 0) {
-    const lines = payload.videos
+    const titles = payload.videos
       .slice(0, 3)
-      .map((v, i) => `${i + 1}. [${v.title}](${v.url})`);
-    parts.push(
-      `\n**Relevant videos from this channel (shown as rich cards below your reply — mention 1-2 by title in text if helpful):**\n${lines.join("\n")}`
-    );
+      .map((v) => v.title)
+      .join("; ");
+    lines.push(`**Videos found:** ${titles}`);
+  }
+
+  if (payload.playlists.length > 0) {
+    const titles = payload.playlists
+      .slice(0, 3)
+      .map((p) => p.title)
+      .join("; ");
+    lines.push(`**Playlists found:** ${titles}`);
   }
 
   if (payload.error) {
-    parts.push(
-      `\n**Note:** YouTube search had an issue (${payload.error}). Still share the official channel link above.`
-    );
+    lines.push(`**Note:** YouTube search issue (${payload.error}).`);
   }
 
-  return parts.join("\n");
+  return `\n\n${lines.join("\n")}`;
 }
 
 export function buildYouTubeSourcesFromPayload(

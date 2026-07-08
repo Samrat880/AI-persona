@@ -14,6 +14,7 @@ import {
   updateChannelAgentState,
   type ChannelAgentState,
 } from "./channelAgentState";
+import { syncPersonaOpenAISession } from "./personaSession";
 
 async function provisionBotUser(
   channelType: string,
@@ -91,7 +92,16 @@ export async function startServerlessAgent(
     }
 
     if (existing.ai_persona_id !== personaId) {
-      await channel.updatePartial({ set: { ai_persona_id: personaId } });
+      const openai = createOpenAIClient();
+      const { id: assistantId } = await getOrCreatePersonaAssistant(
+        openai,
+        personaId
+      );
+      await channel.updatePartial({
+        set: { ai_persona_id: personaId, openai_assistant_id: assistantId },
+      });
+      existing.ai_persona_id = personaId;
+      existing.openai_assistant_id = assistantId;
     }
 
     return { ...existing, ai_persona_id: personaId };
@@ -107,7 +117,7 @@ export async function startServerlessAgent(
     ),
     existing.openai_assistant_id
       ? Promise.resolve(existing.openai_assistant_id)
-      : getOrCreatePersonaAssistant(openai).then((assistant) => assistant.id),
+      : getOrCreatePersonaAssistant(openai, personaId).then((a) => a.id),
     existing.openai_thread_id
       ? Promise.resolve(existing.openai_thread_id)
       : openai.beta.threads.create().then((thread) => thread.id),
@@ -162,16 +172,33 @@ export async function setServerlessPersona(
   channelId: string,
   personaId: PersonaId
 ) {
-  await updateChannelAgentState(channelType, channelId, {
-    ai_persona_id: personaId,
-  });
-
   const { state } = await getChannelWithState(channelType, channelId);
-  if (state.ai_bot_user_id) {
+
+  if (
+    state.ai_agent_enabled &&
+    state.openai_thread_id &&
+    state.ai_bot_user_id
+  ) {
+    const openai = createOpenAIClient();
+    await syncPersonaOpenAISession(
+      openai,
+      channelType,
+      channelId,
+      state,
+      personaId
+    );
+  } else {
+    await updateChannelAgentState(channelType, channelId, {
+      ai_persona_id: personaId,
+    });
+  }
+
+  const { state: updated } = await getChannelWithState(channelType, channelId);
+  if (updated.ai_bot_user_id) {
     const persona = getPersonaMeta(personaId);
     try {
       await getServerClient().upsertUser({
-        id: state.ai_bot_user_id,
+        id: updated.ai_bot_user_id,
         name: persona.botDisplayName,
         image: persona.avatarUrl,
       });
@@ -183,7 +210,7 @@ export async function setServerlessPersona(
         channelType,
         channelId,
         personaId,
-        state.ai_bot_user_id
+        updated.ai_bot_user_id
       );
     }
   }
