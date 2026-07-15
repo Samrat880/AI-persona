@@ -35,7 +35,6 @@ export class OpenAIResponseHandler {
     initialYoutubeSources: YouTubeSource[] = []
   ) {
     this.youtubeSources = [...initialYoutubeSources];
-    this.chatClient.on("ai_indicator.stop", this.handleStopGenerating);
   }
 
   private sendBotEvent(
@@ -68,6 +67,7 @@ export class OpenAIResponseHandler {
 
     try {
       while (!isCompleted) {
+        let sawTerminalOrAction = false;
         for await (const event of currentStream) {
           this.handleStreamEvent(event);
 
@@ -75,6 +75,7 @@ export class OpenAIResponseHandler {
             event.event === "thread.run.requires_action" &&
             event.data.required_action?.type === "submit_tool_outputs"
           ) {
+            sawTerminalOrAction = true;
             this.run_id = event.data.id;
             await this.sendBotEvent({
               type: "ai_indicator.update",
@@ -144,11 +145,13 @@ export class OpenAIResponseHandler {
           }
 
           if (event.event === "thread.run.completed") {
+            sawTerminalOrAction = true;
             isCompleted = true;
             break;
           }
 
           if (event.event === "thread.run.failed") {
+            sawTerminalOrAction = true;
             isCompleted = true;
             await this.handleError(
               new Error(event.data.last_error?.message ?? "Run failed")
@@ -168,6 +171,10 @@ export class OpenAIResponseHandler {
             { tool_outputs: toolOutputs }
           );
           toolOutputs = [];
+        } else if (!sawTerminalOrAction) {
+          // Stream ended without a terminal event — exit to avoid a busy loop.
+          isCompleted = true;
+          break;
         }
       }
     } catch (error) {
@@ -183,29 +190,34 @@ export class OpenAIResponseHandler {
       return;
     }
     this.is_done = true;
-    this.chatClient.off("ai_indicator.stop", this.handleStopGenerating);
     this.onDispose();
   };
 
-  private handleStopGenerating = async (event: Event) => {
-    if (this.is_done || event.message_id !== this.message.id) {
+  /** Called from tRPC cancelGeneration — Stream WS stop events never reach the server client. */
+  stop = async () => {
+    if (this.is_done) {
       return;
     }
 
     console.log("Stop generating for message", this.message.id);
-    if (!this.openai || !this.openAiThread || !this.run_id) {
-      return;
+
+    if (this.run_id) {
+      try {
+        await this.openai.beta.threads.runs.cancel(
+          this.openAiThread.id,
+          this.run_id
+        );
+      } catch (e) {
+        console.error("Error cancelling run", e);
+      }
     }
 
-    try {
-      await this.openai.beta.threads.runs.cancel(
-        this.openAiThread.id,
-        this.run_id
-      );
-    } catch (e) {
-      console.error("Error cancelling run", e);
-    }
+    const stoppedText =
+      this.message_text.trim().length > 0
+        ? this.message_text
+        : "(generation stopped)";
 
+    await this.streamMessageText(this.message.id, stoppedText, true);
     await this.sendBotEvent({
       type: "ai_indicator.clear",
       cid: this.message.cid,

@@ -24,6 +24,7 @@ import {
 } from "~/components/persona-toggle";
 import { Button } from "~/components/ui/button";
 import { useAgentProcess } from "~/hooks/use-agent-process";
+import { api } from "~/trpc/react";
 
 interface ChatInterfaceProps {
   onToggleSidebar: () => void;
@@ -186,6 +187,7 @@ function ChannelMessageInput({
   const { channel: activeChannel, messages } = useChannelStateContext();
   const { aiState } = useAIState(activeChannel);
   const processAgentMessage = useAgentProcess();
+  const cancelGeneration = api.agent.cancelGeneration.useMutation();
   const [inputText, setInputText] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -200,11 +202,11 @@ function ChannelMessageInput({
         .reverse()
         .find((m) => m.user?.id.startsWith("ai-bot"));
       if (aiMessage) {
-        void activeChannel.sendEvent({
-          type: "ai_indicator.stop",
-          cid: activeChannel.cid,
-          message_id: aiMessage.id,
-        });
+        void cancelGeneration.mutateAsync({ messageId: aiMessage.id }).catch(
+          (error: unknown) => {
+            console.error("[agent] cancelGeneration failed:", error);
+          }
+        );
       }
     }
   };

@@ -30,6 +30,10 @@ export const processMessageInputSchema = channelInputSchema.extend({
   messageId: streamMessageIdSchema.optional(),
 });
 
+export const cancelGenerationInputSchema = z.object({
+  messageId: streamMessageIdSchema,
+});
+
 export const setPersonaInputSchema = channelInputSchema.extend({
   personaId: personaIdSchema,
 });
