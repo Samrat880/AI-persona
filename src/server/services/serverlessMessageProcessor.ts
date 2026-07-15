@@ -23,6 +23,10 @@ import {
 } from "./channelAgentState";
 import { syncPersonaOpenAISession } from "./personaSession";
 import { startServerlessAgent } from "./serverlessAgentLifecycle";
+import {
+  registerGeneration,
+  unregisterGeneration,
+} from "./generationRegistry";
 import { trimThreadHistory } from "./threadHistory";
 import {
   buildYouTubeContext,
@@ -191,9 +195,11 @@ export async function processServerlessMessage(
     channelMessage as MessageResponse,
     personaId,
     botUserId,
-    () => undefined,
+    () => unregisterGeneration(channelMessage.id),
     youtubeSources
   );
+
+  registerGeneration(channelMessage.id, () => handler.stop());
 
   await handler.run();
 }

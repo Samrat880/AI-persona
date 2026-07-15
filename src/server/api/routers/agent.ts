@@ -8,9 +8,11 @@ import {
 } from "~/server/services/serverlessAgentLifecycle";
 import {
   channelInputSchema,
+  cancelGenerationInputSchema,
   optionalPersonaIdSchema,
   processMessageInputSchema,
 } from "~/server/schemas/chat";
+import { cancelGeneration } from "~/server/services/generationRegistry";
 
 export const agentRouter = createTRPCRouter({
   start: publicProcedure
@@ -33,6 +35,13 @@ export const agentRouter = createTRPCRouter({
     await stopServerlessAgent(input.channelType, input.channelId);
     return { ok: true };
   }),
+
+  cancelGeneration: publicProcedure
+    .input(cancelGenerationInputSchema)
+    .mutation(async ({ input }) => {
+      const cancelled = await cancelGeneration(input.messageId);
+      return { ok: true, cancelled };
+    }),
 
   status: publicProcedure.input(channelInputSchema).query(async ({ input }) => {
     return getServerlessAgentStatus(input.channelType, input.channelId);
